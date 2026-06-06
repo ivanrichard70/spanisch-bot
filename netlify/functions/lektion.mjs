@@ -1,5 +1,6 @@
 // netlify/functions/lektion.mjs
-const VOICE_ID = "21m00Tcm4TlvDq8ikWAM";   // <-- deine echte Voice-ID wieder eintragen!
+const VOICE_NAME = "Kore";                          // Gemini-Stimme (mehrsprachig)
+const TTS_MODEL  = "gemini-2.5-flash-preview-tts";  // Gemini TTS-Modell
 
 const SYSTEM = `Du bist Spanischlehrer und erstellst kurze HÖR-Lektionen
 für einen Anfänger (Niveau A1), der sie beim Autofahren anhört.
@@ -7,6 +8,28 @@ Schreibe ein gesprochenes Skript von ca. 2 Minuten: ein einfacher,
 LANGSAMER spanischer Mini-Dialog. Führe neue Wörter so ein: zuerst
 Spanisch, dann kurz die deutsche Bedeutung, dann nochmal Spanisch.
 Gib NUR den vorzulesenden Text aus – kein Markdown, keine Überschriften.`;
+
+// Verpackt rohes PCM-Audio in einen abspielbaren WAV-Container
+function pcmToWav(pcm, sampleRate) {
+  const numChannels = 1, bitsPerSample = 16;
+  const byteRate = sampleRate * numChannels * bitsPerSample / 8;
+  const blockAlign = numChannels * bitsPerSample / 8;
+  const h = Buffer.alloc(44);
+  h.write("RIFF", 0);
+  h.writeUInt32LE(36 + pcm.length, 4);
+  h.write("WAVE", 8);
+  h.write("fmt ", 12);
+  h.writeUInt32LE(16, 16);
+  h.writeUInt16LE(1, 20);
+  h.writeUInt16LE(numChannels, 22);
+  h.writeUInt32LE(sampleRate, 24);
+  h.writeUInt32LE(byteRate, 28);
+  h.writeUInt16LE(blockAlign, 32);
+  h.writeUInt16LE(bitsPerSample, 34);
+  h.write("data", 36);
+  h.writeUInt32LE(pcm.length, 40);
+  return Buffer.concat([h, pcm]);
+}
 
 export default async () => {
   try {
@@ -25,32 +48,46 @@ export default async () => {
         messages: [{ role: "user", content: "Thema: sich vorstellen und begrüßen." }],
       }),
     });
-
     if (!claudeRes.ok) {
-      const err = await claudeRes.text();
-      return new Response(`CLAUDE-FEHLER ${claudeRes.status}: ${err}`, { status: 500 });
+      return new Response(`CLAUDE-FEHLER ${claudeRes.status}: ${await claudeRes.text()}`, { status: 500 });
     }
-
     const data = await claudeRes.json();
     const skript = data.content.filter(b => b.type === "text").map(b => b.text).join("");
 
-    // 2) TTS bei ElevenLabs
-    const ttsRes = await fetch(`https://api.elevenlabs.io/v1/text-to-speech/${VOICE_ID}`, {
-      method: "POST",
-      headers: {
-        "xi-api-key": process.env.ELEVENLABS_API_KEY,
-        "content-type": "application/json",
-      },
-      body: JSON.stringify({ text: skript, model_id: "eleven_multilingual_v2" }),
-    });
-
+    // 2) TTS von Gemini
+    const ttsRes = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent`,
+      {
+        method: "POST",
+        headers: {
+          "x-goog-api-key": process.env.GEMINI_API_KEY,
+          "content-type": "application/json",
+        },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: skript }] }],
+          generationConfig: {
+            responseModalities: ["AUDIO"],
+            speechConfig: {
+              voiceConfig: { prebuiltVoiceConfig: { voiceName: VOICE_NAME } },
+            },
+          },
+        }),
+      }
+    );
     if (!ttsRes.ok) {
-      const err = await ttsRes.text();
-      return new Response(`ELEVENLABS-FEHLER ${ttsRes.status}: ${err}\n\nSKRIPT WAR:\n${skript}`, { status: 500 });
+      return new Response(`GEMINI-FEHLER ${ttsRes.status}: ${await ttsRes.text()}\n\nSKRIPT WAR:\n${skript}`, { status: 500 });
     }
 
-    const audio = await ttsRes.arrayBuffer();
-    return new Response(audio, { headers: { "content-type": "audio/mpeg" } });
+    const ttsData = await ttsRes.json();
+    const part = ttsData?.candidates?.[0]?.content?.parts?.[0]?.inlineData;
+    if (!part?.data) {
+      return new Response(`KEIN AUDIO. Antwort:\n${JSON.stringify(ttsData).slice(0, 800)}`, { status: 500 });
+    }
+
+    const rate = (part.mimeType?.match(/rate=(\d+)/)?.[1]) || 24000;
+    const wav = pcmToWav(Buffer.from(part.data, "base64"), Number(rate));
+
+    return new Response(wav, { headers: { "content-type": "audio/wav" } });
 
   } catch (e) {
     return new Response(`ALLGEMEINER FEHLER: ${e.message}`, { status: 500 });
