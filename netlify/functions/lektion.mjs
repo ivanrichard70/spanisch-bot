@@ -1,5 +1,5 @@
 // netlify/functions/lektion.mjs
-const VOICE_ID = "Gubgw9l4dtIoQA9YZHgx";   // <-- deine echte Voice-ID wieder eintragen!
+const VOICE_ID = "21m00Tcm4TlvDq8ikWAM";   // <-- deine echte Voice-ID wieder eintragen!
 
 const SYSTEM = `Du bist Spanischlehrer und erstellst kurze HÖR-Lektionen
 für einen Anfänger (Niveau A1), der sie beim Autofahren anhört.
