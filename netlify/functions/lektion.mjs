@@ -2,12 +2,10 @@
 const VOICE_NAME = "Kore";                          // Gemini-Stimme (mehrsprachig)
 const TTS_MODEL  = "gemini-2.5-flash-preview-tts";  // Gemini TTS-Modell
 
-const SYSTEM = `Du bist Spanischlehrer und erstellst kurze HÖR-Lektionen
-für einen Anfänger (Niveau A1), der sie beim Autofahren anhört.
-Schreibe ein gesprochenes Skript von ca. 2 Minuten: ein einfacher,
-LANGSAMER spanischer Mini-Dialog. Führe neue Wörter so ein: zuerst
-Spanisch, dann kurz die deutsche Bedeutung, dann nochmal Spanisch.
-Gib NUR den vorzulesenden Text aus – kein Markdown, keine Überschriften.`;
+const SYSTEM = `Du bist Spanischlehrer und erstellst eine SEHR KURZE Hör-Lektion
+(nur ca. 20-30 Sekunden, 3-4 kurze Sätze) für einen Anfänger (A1).
+Ein einfacher, langsamer spanischer Gruß-Dialog. Neue Wörter: zuerst
+Spanisch, dann kurz Deutsch. Gib NUR den vorzulesenden Text aus.`;
 
 // Verpackt rohes PCM-Audio in einen abspielbaren WAV-Container
 function pcmToWav(pcm, sampleRate) {
