@@ -1,32 +1,28 @@
 // netlify/functions/lektion.mjs
-const VOICE_NAME = "Kore";                          // Gemini-Stimme (mehrsprachig)
-const TTS_MODEL  = "gemini-2.5-flash-preview-tts";  // Gemini TTS-Modell
+import lamejs from "@breezystack/lamejs";
 
-const SYSTEM = `Du bist Spanischlehrer und erstellst eine SEHR KURZE Hör-Lektion
-(nur ca. 20-30 Sekunden, 3-4 kurze Sätze) für einen Anfänger (A1).
-Ein einfacher, langsamer spanischer Gruß-Dialog. Neue Wörter: zuerst
-Spanisch, dann kurz Deutsch. Gib NUR den vorzulesenden Text aus.`;
+const VOICE_NAME = "Kore";
+const TTS_MODEL  = "gemini-2.5-flash-preview-tts";
 
-// Verpackt rohes PCM-Audio in einen abspielbaren WAV-Container
-function pcmToWav(pcm, sampleRate) {
-  const numChannels = 1, bitsPerSample = 16;
-  const byteRate = sampleRate * numChannels * bitsPerSample / 8;
-  const blockAlign = numChannels * bitsPerSample / 8;
-  const h = Buffer.alloc(44);
-  h.write("RIFF", 0);
-  h.writeUInt32LE(36 + pcm.length, 4);
-  h.write("WAVE", 8);
-  h.write("fmt ", 12);
-  h.writeUInt32LE(16, 16);
-  h.writeUInt16LE(1, 20);
-  h.writeUInt16LE(numChannels, 22);
-  h.writeUInt32LE(sampleRate, 24);
-  h.writeUInt32LE(byteRate, 28);
-  h.writeUInt16LE(blockAlign, 32);
-  h.writeUInt16LE(bitsPerSample, 34);
-  h.write("data", 36);
-  h.writeUInt32LE(pcm.length, 40);
-  return Buffer.concat([h, pcm]);
+const SYSTEM = `Du bist Spanischlehrer und erstellst eine kurze HÖR-Lektion
+(ca. 1 Minute) für einen Anfänger (A1), der sie unterwegs anhört.
+Ein einfacher, LANGSAMER spanischer Mini-Dialog zu einem Alltagsthema.
+Neue Wörter: zuerst Spanisch, dann kurz die deutsche Bedeutung, dann
+nochmal Spanisch. Gib NUR den vorzulesenden Text aus – kein Markdown.`;
+
+// Roh-PCM (16-bit, mono) zu MP3 kodieren
+function pcmToMp3(pcmBase64, sampleRate) {
+  const bytes = Uint8Array.from(Buffer.from(pcmBase64, "base64"));
+  const samples = new Int16Array(bytes.buffer, 0, Math.floor(bytes.byteLength / 2));
+  const encoder = new lamejs.Mp3Encoder(1, sampleRate, 128);
+  const chunks = [];
+  for (let i = 0; i < samples.length; i += 1152) {
+    const buf = encoder.encodeBuffer(samples.subarray(i, i + 1152));
+    if (buf.length > 0) chunks.push(Buffer.from(buf));
+  }
+  const end = encoder.flush();
+  if (end.length > 0) chunks.push(Buffer.from(end));
+  return Buffer.concat(chunks);
 }
 
 export default async () => {
@@ -82,10 +78,11 @@ export default async () => {
       return new Response(`KEIN AUDIO. Antwort:\n${JSON.stringify(ttsData).slice(0, 800)}`, { status: 500 });
     }
 
-    const rate = (part.mimeType?.match(/rate=(\d+)/)?.[1]) || 24000;
-    const wav = pcmToWav(Buffer.from(part.data, "base64"), Number(rate));
+    // 3) PCM -> MP3
+    const rate = Number(part.mimeType?.match(/rate=(\d+)/)?.[1]) || 24000;
+    const mp3 = pcmToMp3(part.data, rate);
 
-    return new Response(wav, { headers: { "content-type": "audio/wav" } });
+    return new Response(mp3, { headers: { "content-type": "audio/mpeg" } });
 
   } catch (e) {
     return new Response(`ALLGEMEINER FEHLER: ${e.message}`, { status: 500 });
