@@ -10551,15 +10551,20 @@ nochmal Spanisch. Wiederhole Schl\xFCssels\xE4tze. Gib NUR den vorzulesenden
 Text aus \u2013 kein Markdown, keine \xDCberschriften.`;
 function pcmToMp3(pcmBase64, sampleRate) {
   const bytes = Uint8Array.from(Buffer.from(pcmBase64, "base64"));
-  const samples = new Int16Array(bytes.buffer, 0, Math.floor(bytes.byteLength / 2));
+  let samples = new Int16Array(bytes.buffer, 0, Math.floor(bytes.byteLength / 2));
+  const threshold = 200;
+  let end = samples.length;
+  while (end > 0 && Math.abs(samples[end - 1]) < threshold) end--;
+  end = Math.min(samples.length, end + Math.floor(sampleRate * 0.3));
+  samples = samples.subarray(0, end);
   const encoder = new fa.Mp3Encoder(1, sampleRate, 128);
   const chunks = [];
   for (let i = 0; i < samples.length; i += 1152) {
     const buf = encoder.encodeBuffer(samples.subarray(i, i + 1152));
     if (buf.length > 0) chunks.push(Buffer.from(buf));
   }
-  const end = encoder.flush();
-  if (end.length > 0) chunks.push(Buffer.from(end));
+  const last = encoder.flush();
+  if (last.length > 0) chunks.push(Buffer.from(last));
   return Buffer.concat(chunks);
 }
 var generate_background_src_default = async () => {
@@ -10583,7 +10588,7 @@ var generate_background_src_default = async () => {
       return;
     }
     const data = await claudeRes.json();
-    const skript = data.content.filter((b) => b.type === "text").map((b) => b.text).join("");
+    const skript = data.content.filter((b) => b.type === "text").map((b) => b.text).join("").trim();
     const ttsRes = await fetch(
       `https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent`,
       {
