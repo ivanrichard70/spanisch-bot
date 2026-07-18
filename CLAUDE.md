@@ -47,7 +47,7 @@ Drei Endpunkte (online):
 ## Tech-Stack
 
 - **Netlify** – Hosting, Serverless Functions, Blobs-Speicher, (später) Scheduling.
-- **Netlify Blobs** (`@netlify/blobs`) – Speicher für die MP3s (Store `lektionen`, Key `latest`).
+- **Netlify Blobs** (`@netlify/blobs`) – Speicher für die MP3s (Store `lektionen`, Details siehe „Referenzwerte").
 - **Anthropic API** – erzeugt das Lektions-Skript. Modell: `claude-sonnet-4-6`.
 - **Google Gemini API (TTS)** – Text-to-Speech. Modell: `gemini-2.5-flash-preview-tts`, Stimme `Kore`.
 - **lamejs** (`@breezystack/lamejs`) – wandelt rohes PCM in MP3 um.
