@@ -152,6 +152,12 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 - Lernermodell: Wortschatz & Schwächen mitführen, Lektionen daran anpassen
   (z. B. gezielt Fragewörter üben).
 - Optionaler Gesprächs-Modus (Sprechen + Antworten) für Situationen mit freien Händen.
+- **Grammatik-Lektionen & fortgeschrittene Gespräche (B1+):** in denselben Feed gemischt
+  mit den A1-Alltagsdialogen (bewusste Entscheidung des Nutzers – nicht als separater Feed
+  pro Level). Umsetzung voraussichtlich: `TOPICS`-Einträge um `level`/`type` erweitern
+  (z. B. `{ topic, level: "A1"|"B1", type: "dialog"|"grammatik" }`) und passend dazu
+  mehrere `SYSTEM`-Prompt-Varianten (Tempo, Übersetzungsanteil, Erklärungstiefe unterscheiden
+  sich je nach Level/Typ deutlich vom aktuellen A1-Dialog-Prompt).
 
 ---
 
