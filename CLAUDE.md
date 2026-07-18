@@ -100,6 +100,14 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 - **MP3, nicht WAV:** WAV ist zu groß (2 Min ≈ 6 MB, sprengt Netlify-Limits). MP3 ≈ 1 MB.
 - **Gemini hängt am Ende Stille an** – wird im Code abgeschnitten (Amplituden-Schwelle,
   0,3 s Auslauf bleibt).
+- **Gemini-TTS-Tageskontingent: 10 Anfragen/Tag** (kostenloser Tarif von
+  `gemini-2.5-flash-preview-tts`, Preview-Modelle haben oft enge Limits). Danach schlagen
+  alle `generate-background`-Aufrufe kommentarlos fehl (kein Audio, kein Fehler-Log in
+  Netlify sichtbar – nur in Google AI Studio unter Kontingenten erkennbar, z. B. „11 / 10").
+  Reset vermutlich Mitternacht Pacific Time. Bei Massen-Erzeugung mehrerer Lektionen
+  hintereinander: **max. ~9 pro Tag einplanen** (ein Puffer, da auch fehlgeschlagene
+  Versuche zählen), Rest am Folgetag nachholen. Für den späteren Normalbetrieb
+  (1x täglich automatisch) ist das Limit unkritisch.
 - **Credits:** Jeder Netlify-Deploy kostet Credits. Möglichst lokal / im Codespace mit
   `netlify dev` testen und selten deployen.
 - **Fehlerausgabe:** Die Funktionen loggen Fehler als `CLAUDE-FEHLER`, `GEMINI-FEHLER`,
@@ -124,6 +132,9 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 **Funktioniert:**
 - Erzeugung (Claude → Gemini → MP3, inkl. End-Stille-Trim), Speichern (Blobs),
   Ausliefern (Funktion). Eine saubere 2-Minuten-Lektion lief online bereits durch.
+- Feed ist live und in Apple Podcasts abonniert (per „Sendung per URL abonnieren",
+  normale Katalog-Suche findet private Feeds nicht). Aktuell **9 von 15** geplanten
+  Start-Lektionen erzeugt (Rest s. „Nächster konkreter Schritt").
 - Der AI-Gateway-Bug ist diagnostiziert; Umstellung auf `MY_…`-Namen ist im Code
   gemacht und gepusht; die `MY_…`-Variablen sind in Netlify angelegt.
 - **Episoden-Historie:** jede Erzeugung speichert zusätzlich zu `latest` eine dauerhafte
@@ -163,13 +174,20 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 
 ## Nächster konkreter Schritt
 
-Deploy nach dem Fix erneut anstoßen (Netlify-Dashboard → „Trigger deploy"), dann prüfen,
-dass `https://spanishforivi.netlify.app/.netlify/functions/feed` gültiges RSS-XML liefert
-(nicht mehr 404) und in einer Podcast-App (z. B. Apple Podcasts über „Sendung per URL
-abonnieren", AntennaPod, Overcast) abonnierbar ist. Danach entscheiden, ob/wann die
-Scheduled Function für tägliche automatische Erzeugung gebaut wird.
+Deploy und Feed funktionieren (`/.netlify/functions/feed` liefert gültiges RSS, in
+Apple Podcasts abonniert). Themenrotation ist live. Beim Befüllen mit einem
+Start-Vorrat (Ziel: 15 Lektionen) griff nach 9 erfolgreichen Erzeugungen das
+Gemini-TTS-Tageskontingent (10/Tag, siehe „Konventionen & Stolpersteine") – **9 von 15
+Lektionen sind fertig**, die restlichen 6 fehlen noch.
 
-**Bekannter, bereits gefixter Fehler:** Ein erster Deploy-Versuch scheiterte, weil
-`feed.src.mjs` fälschlich in `netlify/functions/` statt `netlify/functions-src/` lag –
-Netlify hält jede Datei dort für eine Funktion, und der Punkt im Namen ergab einen
-ungültigen Funktionsnamen (`feed.src`). Behoben durch Verschieben der Quelldatei.
+**Um fortzusetzen (an einem neuen Tag, nach Kontingent-Reset):** 6x
+`https://spanishforivi.netlify.app/.netlify/functions/generate-background` aufrufen,
+zwischen den Aufrufen jeweils warten, bis die vorherige Episode im Feed auftaucht
+(nicht parallel feuern – sonst berechnen mehrere Aufrufe gleichzeitig denselben
+Rotations-Index aus `TOPICS[bisherige-Episoden-Anzahl % TOPICS.length]` und erzeugen
+doppelte Themen). Jeder Aufruf dauert eher 1,5–3 Min als die ursprünglich angenommenen
+30–40 Sek – beim Warten großzügig timeouten (mind. 200s), bevor man einen Fehler
+vermutet.
+
+**Danach:** Cover-Bild ergänzen, dann Scheduled Function für 1x tägliche automatische
+Erzeugung bauen (Tageskontingent von 10 reicht dafür locker).
