@@ -10572,7 +10572,7 @@ var generate_background_src_default = async () => {
     const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
-        "x-api-key": process.env.ANTHROPIC_API_KEY,
+        "x-api-key": process.env.MY_ANTHROPIC_API_KEY,
         "anthropic-version": "2023-06-01",
         "content-type": "application/json"
       },
@@ -10593,7 +10593,7 @@ var generate_background_src_default = async () => {
       `https://generativelanguage.googleapis.com/v1beta/models/${TTS_MODEL}:generateContent`,
       {
         method: "POST",
-        headers: { "x-goog-api-key": process.env.GEMINI_API_KEY, "content-type": "application/json" },
+        headers: { "x-goog-api-key": process.env.MY_GEMINI_API_KEY, "content-type": "application/json" },
         body: JSON.stringify({
           contents: [{ parts: [{ text: skript }] }],
           generationConfig: {
