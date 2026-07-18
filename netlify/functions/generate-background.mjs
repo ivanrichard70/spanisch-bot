@@ -10549,6 +10549,18 @@ Ein einfacher, LANGSAMER spanischer Mini-Dialog zu einem Alltagsthema.
 Neue W\xF6rter: zuerst Spanisch, dann kurz die deutsche Bedeutung, dann
 nochmal Spanisch. Wiederhole Schl\xFCssels\xE4tze. Gib NUR den vorzulesenden
 Text aus \u2013 kein Markdown, keine \xDCberschriften.`;
+var TOPICS = [
+  "sich vorstellen und begr\xFC\xDFen",
+  "im Restaurant bestellen",
+  "nach dem Weg fragen",
+  "einkaufen gehen",
+  "die Uhrzeit sagen",
+  "\xFCber das Wetter sprechen",
+  "die Familie vorstellen",
+  "Zahlen und Preise",
+  "ein Taxi rufen",
+  "im Hotel einchecken"
+];
 function pcmToMp3(pcmBase64, sampleRate) {
   const bytes = Uint8Array.from(Buffer.from(pcmBase64, "base64"));
   let samples = new Int16Array(bytes.buffer, 0, Math.floor(bytes.byteLength / 2));
@@ -10569,6 +10581,9 @@ function pcmToMp3(pcmBase64, sampleRate) {
 }
 var generate_background_src_default = async () => {
   try {
+    const store = getStore("lektionen");
+    const { blobs } = await store.list({ prefix: "episodes/" });
+    const topic = TOPICS[blobs.length % TOPICS.length];
     const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
       method: "POST",
       headers: {
@@ -10580,7 +10595,7 @@ var generate_background_src_default = async () => {
         model: "claude-sonnet-4-6",
         max_tokens: 2e3,
         system: SYSTEM,
-        messages: [{ role: "user", content: "Thema: sich vorstellen und begr\xFC\xDFen." }]
+        messages: [{ role: "user", content: `Thema: ${topic}.` }]
       })
     });
     if (!claudeRes.ok) {
@@ -10615,13 +10630,12 @@ var generate_background_src_default = async () => {
     }
     const rate = Number(part.mimeType?.match(/rate=(\d+)/)?.[1]) || 24e3;
     const mp3 = pcmToMp3(part.data, rate);
-    const store = getStore("lektionen");
     const ab = mp3.buffer.slice(mp3.byteOffset, mp3.byteOffset + mp3.byteLength);
     const created = (/* @__PURE__ */ new Date()).toISOString();
     const episodeKey = `episodes/${created.replace(/[:.]/g, "-")}.mp3`;
-    await store.set(episodeKey, ab, { metadata: { created, bytes: mp3.length } });
-    await store.set("latest", ab, { metadata: { created, bytes: mp3.length } });
-    console.log("Lektion gespeichert:", mp3.length, "bytes ->", episodeKey);
+    await store.set(episodeKey, ab, { metadata: { created, bytes: mp3.length, topic } });
+    await store.set("latest", ab, { metadata: { created, bytes: mp3.length, topic } });
+    console.log("Lektion gespeichert:", mp3.length, "bytes ->", episodeKey, "| Thema:", topic);
   } catch (e) {
     console.error("ALLGEMEINER FEHLER:", e.message);
   }

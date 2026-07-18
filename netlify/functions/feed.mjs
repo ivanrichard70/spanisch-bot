@@ -788,7 +788,11 @@ function escapeXml(str) {
     '"': "&quot;"
   })[c]);
 }
-function titleForEpisode(created) {
+function capitalize(str) {
+  return str.charAt(0).toUpperCase() + str.slice(1);
+}
+function titleForEpisode(topic, created) {
+  if (topic) return `Spanisch-Lektion: ${capitalize(topic)}`;
   const d = created ? new Date(created) : /* @__PURE__ */ new Date();
   return `Spanisch-Lektion \u2013 ${d.toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })}`;
 }
@@ -803,16 +807,19 @@ var feed_src_default = async (req) => {
       episodes.push({
         key,
         created: result?.metadata?.created ?? null,
-        bytes: Number(result?.metadata?.bytes) || 0
+        bytes: Number(result?.metadata?.bytes) || 0,
+        topic: result?.metadata?.topic ?? null
       });
     }
     const origin = new URL(req.url).origin;
-    const items = episodes.map(({ key, created, bytes }) => {
+    const items = episodes.map(({ key, created, bytes, topic }) => {
       const pubDate = created ? new Date(created).toUTCString() : (/* @__PURE__ */ new Date()).toUTCString();
       const enclosureUrl = `${origin}/.netlify/functions/lektion?id=${encodeURIComponent(key)}`;
+      const dateLabel = created ? new Date(created).toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" }) : "";
       return `
     <item>
-      <title>${escapeXml(titleForEpisode(created))}</title>
+      <title>${escapeXml(titleForEpisode(topic, created))}</title>
+      <description>${escapeXml(dateLabel)}</description>
       <guid isPermaLink="false">${escapeXml(key)}</guid>
       <pubDate>${pubDate}</pubDate>
       <enclosure url="${escapeXml(enclosureUrl)}" length="${bytes}" type="audio/mpeg" />

@@ -131,7 +131,12 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 - **RSS-Feed:** `/.netlify/functions/feed` listet alle Episoden aus Blobs und baut daraus
   einen abonnierbaren RSS-2.0-Feed (iTunes-Tags). Enclosure-URLs zeigen auf
   `/.netlify/functions/lektion?id=episodes/<Zeitstempel>.mp3`, das `lektion.mjs` jetzt
-  zusätzlich zu `latest` unterstützt.
+  zusätzlich zu `latest` unterstützt. Episoden-Titel im Feed zeigen das Thema
+  (`Spanisch-Lektion: <Thema>`), Fallback aufs Datum bei alten Episoden ohne Thema-Metadatum.
+- **Themenrotation:** `TOPICS`-Array in `generate-background.mjs` (10 Alltagsthemen, A1).
+  Bei jedem Aufruf wird `TOPICS[bisherige-Episoden-Anzahl % TOPICS.length]` gewählt – kein
+  Zufall, sondern deterministisch reihum, rein aus der Anzahl vorhandener `episodes/`-Blobs
+  berechnet (kein separater Zähler nötig). Thema wird auch in den Blob-Metadaten gespeichert.
 
 **Bekannte Lücken im Feed (bewusst zurückgestellt):**
 - Kein `<itunes:image>` (Cover-Art) – noch kein Bild-Asset im Projekt.
@@ -146,7 +151,6 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 **Spätere Ausbaustufen:**
 - Lernermodell: Wortschatz & Schwächen mitführen, Lektionen daran anpassen
   (z. B. gezielt Fragewörter üben).
-- Wechselnde Themen statt festem „sich vorstellen und begrüßen" (bewusst zurückgestellt).
 - Optionaler Gesprächs-Modus (Sprechen + Antworten) für Situationen mit freien Händen.
 
 ---
