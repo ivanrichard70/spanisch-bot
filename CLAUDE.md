@@ -86,10 +86,15 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   Prompt, Stimme) können direkt in der Datei gemacht werden. Bei größeren Änderungen an
   der Logik: aus lesbarer Quelle neu mit esbuild bündeln
   (`esbuild <src> --bundle --platform=node --format=esm --outfile=<ziel>`).
-- **`feed.src.mjs` ist die lesbare Quelle von `feed.mjs`** und liegt (im Gegensatz zu
-  den beiden anderen Funktionen) mit im Repo. Bei Änderungen an der RSS-Logik: `.src.mjs`
-  bearbeiten, dann neu bündeln (siehe Befehl oben) und `feed.mjs` überschreiben – nicht
-  nur die gebündelte Datei direkt patchen, sonst laufen Quelle und Bundle auseinander.
+- **`netlify/functions-src/feed.src.mjs` ist die lesbare Quelle von `feed.mjs`.**
+  WICHTIG: Quelldateien dürfen NIE in `netlify/functions/` liegen – Netlify behandelt
+  jede Datei dort als eigene Funktion, und ein Punkt im Dateinamen (z. B. `feed.src.mjs`)
+  ergibt einen ungültigen Funktionsnamen und lässt den Deploy fehlschlagen (bereits
+  passiert, siehe Git-Historie). Quellen gehören nach `netlify/functions-src/`. Bei
+  Änderungen an der RSS-Logik: `.src.mjs` dort bearbeiten, dann neu bündeln
+  (`esbuild netlify/functions-src/feed.src.mjs --bundle --platform=node --format=esm
+  --outfile=netlify/functions/feed.mjs`) – nicht nur die gebündelte Datei direkt patchen,
+  sonst laufen Quelle und Bundle auseinander.
 - **Hintergrund-Funktion:** Der Dateiname MUSS auf `-background` enden, sonst greift das
   15-Min-Limit nicht und lange Lektionen laufen in einen Timeout (502).
 - **MP3, nicht WAV:** WAV ist zu groß (2 Min ≈ 6 MB, sprengt Netlify-Limits). MP3 ≈ 1 MB.
@@ -148,7 +153,13 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 
 ## Nächster konkreter Schritt
 
-Feed lokal mit `netlify dev` testen (`/.netlify/functions/feed` liefert gültiges RSS-XML,
-Enclosure-Links spielen ab) und in einer Podcast-App (z. B. AntennaPod, Overcast) mit der
-lokalen/deployten Feed-URL abonnieren. Danach entscheiden, ob/wann die Scheduled Function
-für tägliche automatische Erzeugung gebaut wird.
+Deploy nach dem Fix erneut anstoßen (Netlify-Dashboard → „Trigger deploy"), dann prüfen,
+dass `https://spanishforivi.netlify.app/.netlify/functions/feed` gültiges RSS-XML liefert
+(nicht mehr 404) und in einer Podcast-App (z. B. Apple Podcasts über „Sendung per URL
+abonnieren", AntennaPod, Overcast) abonnierbar ist. Danach entscheiden, ob/wann die
+Scheduled Function für tägliche automatische Erzeugung gebaut wird.
+
+**Bekannter, bereits gefixter Fehler:** Ein erster Deploy-Versuch scheiterte, weil
+`feed.src.mjs` fälschlich in `netlify/functions/` statt `netlify/functions-src/` lag –
+Netlify hält jede Datei dort für eine Funktion, und der Punkt im Namen ergab einen
+ungültigen Funktionsnamen (`feed.src`). Behoben durch Verschieben der Quelldatei.
