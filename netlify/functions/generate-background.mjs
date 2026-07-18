@@ -10617,8 +10617,11 @@ var generate_background_src_default = async () => {
     const mp3 = pcmToMp3(part.data, rate);
     const store = getStore("lektionen");
     const ab = mp3.buffer.slice(mp3.byteOffset, mp3.byteOffset + mp3.byteLength);
-    await store.set("latest", ab, { metadata: { created: (/* @__PURE__ */ new Date()).toISOString(), bytes: mp3.length } });
-    console.log("Lektion gespeichert:", mp3.length, "bytes");
+    const created = (/* @__PURE__ */ new Date()).toISOString();
+    const episodeKey = `episodes/${created.replace(/[:.]/g, "-")}.mp3`;
+    await store.set(episodeKey, ab, { metadata: { created, bytes: mp3.length } });
+    await store.set("latest", ab, { metadata: { created, bytes: mp3.length } });
+    console.log("Lektion gespeichert:", mp3.length, "bytes ->", episodeKey);
   } catch (e) {
     console.error("ALLGEMEINER FEHLER:", e.message);
   }

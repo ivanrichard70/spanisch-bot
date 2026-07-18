@@ -27,13 +27,20 @@ Erzeugen ~30–40 Sek dauert (zu lang für eine normale Funktion mit ~10–26 Se
 
 - **`netlify/functions/generate-background.mjs`** – Hintergrund-Funktion (Name endet
   auf `-background` – bis 15 Min Laufzeit erlaubt). Erzeugt Skript (Claude) – TTS
-  (Gemini) – schneidet End-Stille ab – MP3 (lamejs) – speichert in Blobs unter `latest`.
-- **`netlify/functions/lektion.mjs`** – liest die MP3 aus Blobs und gibt sie als
-  `audio/mpeg` zurück. Braucht keine API-Keys.
+  (Gemini) – schneidet End-Stille ab – MP3 (lamejs) – speichert in Blobs sowohl unter
+  `latest` als auch unter `episodes/<Zeitstempel>.mp3` (Episoden-Historie).
+- **`netlify/functions/lektion.mjs`** – liest eine MP3 aus Blobs und gibt sie als
+  `audio/mpeg` zurück. Ohne Parameter: `latest`. Mit `?id=episodes/<Zeitstempel>.mp3`:
+  genau diese Episode (für die Enclosure-URLs im RSS-Feed). Braucht keine API-Keys.
+- **`netlify/functions/feed.mjs`** (Quelle: `feed.src.mjs`) – listet alle Blobs unter
+  `episodes/` und erzeugt daraus einen RSS-2.0-Feed (iTunes-Tags) zum Abonnieren in
+  Podcast-Apps. Braucht keine API-Keys.
 
-Zwei Endpunkte (online):
+Drei Endpunkte (online):
 - Erzeugen: `/.netlify/functions/generate-background` (liefert 202 „Accepted", läuft im Hintergrund)
-- Anhören: `/.netlify/functions/lektion`
+- Anhören (aktuellste Lektion): `/.netlify/functions/lektion`
+- Anhören (bestimmte Episode): `/.netlify/functions/lektion?id=episodes/<Zeitstempel>.mp3`
+- Abonnieren (RSS): `/.netlify/functions/feed`
 
 ---
 
@@ -79,6 +86,10 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   Prompt, Stimme) können direkt in der Datei gemacht werden. Bei größeren Änderungen an
   der Logik: aus lesbarer Quelle neu mit esbuild bündeln
   (`esbuild <src> --bundle --platform=node --format=esm --outfile=<ziel>`).
+- **`feed.src.mjs` ist die lesbare Quelle von `feed.mjs`** und liegt (im Gegensatz zu
+  den beiden anderen Funktionen) mit im Repo. Bei Änderungen an der RSS-Logik: `.src.mjs`
+  bearbeiten, dann neu bündeln (siehe Befehl oben) und `feed.mjs` überschreiben – nicht
+  nur die gebündelte Datei direkt patchen, sonst laufen Quelle und Bundle auseinander.
 - **Hintergrund-Funktion:** Der Dateiname MUSS auf `-background` enden, sonst greift das
   15-Min-Limit nicht und lange Lektionen laufen in einen Timeout (502).
 - **MP3, nicht WAV:** WAV ist zu groß (2 Min ≈ 6 MB, sprengt Netlify-Limits). MP3 ≈ 1 MB.
@@ -98,7 +109,8 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 - Env-Vars: `MY_ANTHROPIC_API_KEY`, `MY_GEMINI_API_KEY`
 - Modelle: Claude `claude-sonnet-4-6`, Gemini `gemini-2.5-flash-preview-tts`
 - Stimme: `Kore`
-- Blobs: Store `lektionen`, Key `latest`
+- Blobs: Store `lektionen`, Keys `latest` (neueste Lektion) und `episodes/<Zeitstempel>.mp3`
+  (Historie, unbegrenzt aufbewahrt; Zeitstempel = ISO-Datum mit `:`/`.` → `-` ersetzt)
 
 ---
 
@@ -109,24 +121,34 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   Ausliefern (Funktion). Eine saubere 2-Minuten-Lektion lief online bereits durch.
 - Der AI-Gateway-Bug ist diagnostiziert; Umstellung auf `MY_…`-Namen ist im Code
   gemacht und gepusht; die `MY_…`-Variablen sind in Netlify angelegt.
+- **Episoden-Historie:** jede Erzeugung speichert zusätzlich zu `latest` eine dauerhafte
+  Kopie unter `episodes/<Zeitstempel>.mp3` (unbegrenzte Aufbewahrung, bewusste Entscheidung).
+- **RSS-Feed:** `/.netlify/functions/feed` listet alle Episoden aus Blobs und baut daraus
+  einen abonnierbaren RSS-2.0-Feed (iTunes-Tags). Enclosure-URLs zeigen auf
+  `/.netlify/functions/lektion?id=episodes/<Zeitstempel>.mp3`, das `lektion.mjs` jetzt
+  zusätzlich zu `latest` unterstützt.
+
+**Bekannte Lücken im Feed (bewusst zurückgestellt):**
+- Kein `<itunes:image>` (Cover-Art) – noch kein Bild-Asset im Projekt.
+- `feed.mjs` macht pro Aufruf eine `getMetadata`-Anfrage je Episode (N HEAD-Requests).
+  Bei manueller/seltener Erzeugung unkritisch; bei vielen Episoden ggf. später cachen.
 
 **Als Nächstes zu bauen:**
-1. **Episoden-Historie** – jede Lektion mit Datum speichern (statt nur `latest`).
-2. **Podcast-Feed (RSS)** – Funktion, die einen abonnierbaren RSS-Feed erzeugt, damit
-   Lektionen automatisch in der Podcast-App erscheinen (→ CarPlay / Android Auto).
-3. **Scheduled Function** – täglich automatisch eine neue Lektion erzeugen.
+1. **Scheduled Function** – täglich automatisch eine neue Lektion erzeugen (aktuell
+   bewusst manuell, siehe unten).
+2. Optional: Cover-Bild ergänzen, damit Apple Podcasts & Co. das Artwork anzeigen.
 
 **Spätere Ausbaustufen:**
 - Lernermodell: Wortschatz & Schwächen mitführen, Lektionen daran anpassen
   (z. B. gezielt Fragewörter üben).
-- Wechselnde Themen statt festem „sich vorstellen und begrüßen".
+- Wechselnde Themen statt festem „sich vorstellen und begrüßen" (bewusst zurückgestellt).
 - Optionaler Gesprächs-Modus (Sprechen + Antworten) für Situationen mit freien Händen.
 
 ---
 
 ## Nächster konkreter Schritt
 
-Prüfe, dass die Umstellung auf `MY_ANTHROPIC_API_KEY` / `MY_GEMINI_API_KEY` in
-`generate-background.mjs` korrekt und committet ist, und teste die Generierung, bis
-`Lektion gespeichert: <bytes> bytes` erscheint. Danach mit der Episoden-Historie und
-dem RSS-Feed weitermachen.
+Feed lokal mit `netlify dev` testen (`/.netlify/functions/feed` liefert gültiges RSS-XML,
+Enclosure-Links spielen ab) und in einer Podcast-App (z. B. AntennaPod, Overcast) mit der
+lokalen/deployten Feed-URL abonnieren. Danach entscheiden, ob/wann die Scheduled Function
+für tägliche automatische Erzeugung gebaut wird.
