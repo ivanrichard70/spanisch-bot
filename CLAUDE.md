@@ -169,15 +169,15 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   Zufall, sondern deterministisch reihum, rein aus der Anzahl vorhandener `episodes/`-Blobs
   berechnet (kein separater Zähler nötig). Thema wird auch in den Blob-Metadaten gespeichert.
 
-- **Cover-Art & Range-Requests (2026-07-19 behoben, noch nicht deployed):** Feedback
+- **Cover-Art & Range-Requests (2026-07-19 behoben, deployed & verifiziert):** Feedback
   (vermutlich aus einem Podcast-Validator) bemängelte fehlendes `<itunes:image>` (Pflichtfeld
   bei Apple Podcasts/Spotify) sowie fehlende HTTP-Range-Unterstützung in `lektion.mjs`
   (Player können ohne `206 Partial Content` nicht scrubben/vorspulen, brechen teils die
   Wiedergabe ab). Beides behoben: `cover.jpg` (Platzhalter) im Repo-Root ergänzt,
   `feed.src.mjs` liefert jetzt `itunes:image`/`itunes:author`/`<image>`, `lektion.mjs`
-  hat jetzt eine lesbare Quelle (`lektion.src.mjs`) mit Range-Support. **Noch nicht
-  deployed/verifiziert** – nach Deploy prüfen, ob `cover.jpg` unter der Live-URL lädt
-  und der Feed bei einem Podcast-Validator (z. B. podba.se/validate) fehlerfrei durchläuft.
+  hat jetzt eine lesbare Quelle (`lektion.src.mjs`) mit Range-Support. Live geprüft:
+  `cover.jpg` lädt (200, image/jpeg), `lektion` liefert bei `Range: bytes=...` korrekt
+  `206` + `content-range`-Header.
 
 **Bekannte Lücken im Feed (bewusst zurückgestellt):**
 - `feed.mjs` macht pro Aufruf eine `getMetadata`-Anfrage je Episode (N HEAD-Requests).
@@ -186,7 +186,6 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 **Als Nächstes zu bauen:**
 1. **Scheduled Function** – täglich automatisch eine neue Lektion erzeugen (aktuell
    bewusst manuell, siehe unten).
-2. Deploy der Cover-Art/Range-Fixes verifizieren (siehe oben).
 
 **Spätere Ausbaustufen:**
 - Lernermodell: Wortschatz & Schwächen mitführen, Lektionen daran anpassen
@@ -218,6 +217,5 @@ doppelte Themen). Jeder Aufruf dauert eher 1,5–3 Min als die ursprünglich ang
 30–40 Sek – beim Warten großzügig timeouten (mind. 200s), bevor man einen Fehler
 vermutet.
 
-**Danach:** Cover-Art/Range-Fixes deployen und verifizieren (siehe „Aktueller Stand"),
-dann Scheduled Function für 1x tägliche automatische Erzeugung bauen (Tageskontingent
-von 10 reicht dafür locker).
+**Danach:** Scheduled Function für 1x tägliche automatische Erzeugung bauen
+(Tageskontingent von 10 reicht dafür locker).
