@@ -29,12 +29,15 @@ Erzeugen ~30–40 Sek dauert (zu lang für eine normale Funktion mit ~10–26 Se
   auf `-background` – bis 15 Min Laufzeit erlaubt). Erzeugt Skript (Claude) – TTS
   (Gemini) – schneidet End-Stille ab – MP3 (lamejs) – speichert in Blobs sowohl unter
   `latest` als auch unter `episodes/<Zeitstempel>.mp3` (Episoden-Historie).
-- **`netlify/functions/lektion.mjs`** – liest eine MP3 aus Blobs und gibt sie als
-  `audio/mpeg` zurück. Ohne Parameter: `latest`. Mit `?id=episodes/<Zeitstempel>.mp3`:
-  genau diese Episode (für die Enclosure-URLs im RSS-Feed). Braucht keine API-Keys.
+- **`netlify/functions/lektion.mjs`** (Quelle: `lektion.src.mjs`) – liest eine MP3 aus
+  Blobs und gibt sie als `audio/mpeg` zurück. Ohne Parameter: `latest`. Mit
+  `?id=episodes/<Zeitstempel>.mp3`: genau diese Episode (für die Enclosure-URLs im
+  RSS-Feed). Unterstützt HTTP-Range-Requests (`206 Partial Content`) – nötig, damit
+  Podcast-Player (v. a. Apple Podcasts) scrubben/vorspulen können, sonst brechen sie
+  die Wiedergabe ab. Braucht keine API-Keys.
 - **`netlify/functions/feed.mjs`** (Quelle: `feed.src.mjs`) – listet alle Blobs unter
-  `episodes/` und erzeugt daraus einen RSS-2.0-Feed (iTunes-Tags) zum Abonnieren in
-  Podcast-Apps. Braucht keine API-Keys.
+  `episodes/` und erzeugt daraus einen RSS-2.0-Feed (iTunes-Tags, inkl. `itunes:image`/
+  `itunes:author`) zum Abonnieren in Podcast-Apps. Braucht keine API-Keys.
 
 Drei Endpunkte (online):
 - Erzeugen: `/.netlify/functions/generate-background` (liefert 202 „Accepted", läuft im Hintergrund)
@@ -86,15 +89,28 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   Prompt, Stimme) können direkt in der Datei gemacht werden. Bei größeren Änderungen an
   der Logik: aus lesbarer Quelle neu mit esbuild bündeln
   (`esbuild <src> --bundle --platform=node --format=esm --outfile=<ziel>`).
-- **`netlify/functions-src/feed.src.mjs` ist die lesbare Quelle von `feed.mjs`.**
+- **`netlify/functions-src/feed.src.mjs` und `netlify/functions-src/lektion.src.mjs`
+  sind die lesbaren Quellen von `feed.mjs` bzw. `lektion.mjs`.**
   WICHTIG: Quelldateien dürfen NIE in `netlify/functions/` liegen – Netlify behandelt
   jede Datei dort als eigene Funktion, und ein Punkt im Dateinamen (z. B. `feed.src.mjs`)
   ergibt einen ungültigen Funktionsnamen und lässt den Deploy fehlschlagen (bereits
   passiert, siehe Git-Historie). Quellen gehören nach `netlify/functions-src/`. Bei
-  Änderungen an der RSS-Logik: `.src.mjs` dort bearbeiten, dann neu bündeln
+  Änderungen an deren Logik: `.src.mjs` dort bearbeiten, dann neu bündeln, z. B.
   (`esbuild netlify/functions-src/feed.src.mjs --bundle --platform=node --format=esm
   --outfile=netlify/functions/feed.mjs`) – nicht nur die gebündelte Datei direkt patchen,
-  sonst laufen Quelle und Bundle auseinander.
+  sonst laufen Quelle und Bundle auseinander. Zum Bündeln wird `@netlify/blobs` als
+  Node-Modul benötigt (im Repo selbst kein `node_modules`/`package.json` vorhanden) –
+  ggf. temporär in einem Scratch-Verzeichnis installieren und via `NODE_PATH`
+  einbinden, z. B. `NODE_PATH=<scratch>/node_modules npx esbuild …`.
+- **`generate-background.mjs` hat (Stand jetzt) keine lesbare `.src.mjs`-Quelle** –
+  bei größeren Änderungen daran ggf. zuerst eine `generate-background.src.mjs` in
+  `netlify/functions-src/` anlegen (Logik steht am Dateiende der gebündelten Datei,
+  ab dem Kommentar `// generate-background.src.mjs`), dann wie oben bündeln.
+- **`cover.jpg` liegt im Repo-Root** (nicht in `netlify/functions*`) – es gibt **keine
+  `netlify.toml`**, Netlify nutzt daher das Repo-Root als Publish-Verzeichnis (Default
+  ohne Build-Konfiguration). Ausgeliefert unter `https://spanishforivi.netlify.app/cover.jpg`.
+  Falls je eine `netlify.toml` mit eigenem `publish`-Verzeichnis angelegt wird: `cover.jpg`
+  mit umziehen, sonst 404 im Feed.
 - **Hintergrund-Funktion:** Der Dateiname MUSS auf `-background` enden, sonst greift das
   15-Min-Limit nicht und lange Lektionen laufen in einen Timeout (502).
 - **MP3, nicht WAV:** WAV ist zu groß (2 Min ≈ 6 MB, sprengt Netlify-Limits). MP3 ≈ 1 MB.
@@ -124,6 +140,10 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 - Stimme: `Kore`
 - Blobs: Store `lektionen`, Keys `latest` (neueste Lektion) und `episodes/<Zeitstempel>.mp3`
   (Historie, unbegrenzt aufbewahrt; Zeitstempel = ISO-Datum mit `:`/`.` → `-` ersetzt)
+- Cover-Art: `cover.jpg` im Repo-Root (1400×1400px), ausgeliefert unter
+  `https://spanishforivi.netlify.app/cover.jpg`, aktuell ein generierter Platzhalter
+  (rot-gelber Verlauf, „¡Hola! Spanisch Lektionen") – kann jederzeit durch ein
+  eigenes Bild ersetzt werden (Datei einfach überschreiben, gleicher Dateiname/Pfad).
 
 ---
 
@@ -149,15 +169,24 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   Zufall, sondern deterministisch reihum, rein aus der Anzahl vorhandener `episodes/`-Blobs
   berechnet (kein separater Zähler nötig). Thema wird auch in den Blob-Metadaten gespeichert.
 
+- **Cover-Art & Range-Requests (2026-07-19 behoben, noch nicht deployed):** Feedback
+  (vermutlich aus einem Podcast-Validator) bemängelte fehlendes `<itunes:image>` (Pflichtfeld
+  bei Apple Podcasts/Spotify) sowie fehlende HTTP-Range-Unterstützung in `lektion.mjs`
+  (Player können ohne `206 Partial Content` nicht scrubben/vorspulen, brechen teils die
+  Wiedergabe ab). Beides behoben: `cover.jpg` (Platzhalter) im Repo-Root ergänzt,
+  `feed.src.mjs` liefert jetzt `itunes:image`/`itunes:author`/`<image>`, `lektion.mjs`
+  hat jetzt eine lesbare Quelle (`lektion.src.mjs`) mit Range-Support. **Noch nicht
+  deployed/verifiziert** – nach Deploy prüfen, ob `cover.jpg` unter der Live-URL lädt
+  und der Feed bei einem Podcast-Validator (z. B. podba.se/validate) fehlerfrei durchläuft.
+
 **Bekannte Lücken im Feed (bewusst zurückgestellt):**
-- Kein `<itunes:image>` (Cover-Art) – noch kein Bild-Asset im Projekt.
 - `feed.mjs` macht pro Aufruf eine `getMetadata`-Anfrage je Episode (N HEAD-Requests).
   Bei manueller/seltener Erzeugung unkritisch; bei vielen Episoden ggf. später cachen.
 
 **Als Nächstes zu bauen:**
 1. **Scheduled Function** – täglich automatisch eine neue Lektion erzeugen (aktuell
    bewusst manuell, siehe unten).
-2. Optional: Cover-Bild ergänzen, damit Apple Podcasts & Co. das Artwork anzeigen.
+2. Deploy der Cover-Art/Range-Fixes verifizieren (siehe oben).
 
 **Spätere Ausbaustufen:**
 - Lernermodell: Wortschatz & Schwächen mitführen, Lektionen daran anpassen
@@ -189,5 +218,6 @@ doppelte Themen). Jeder Aufruf dauert eher 1,5–3 Min als die ursprünglich ang
 30–40 Sek – beim Warten großzügig timeouten (mind. 200s), bevor man einen Fehler
 vermutet.
 
-**Danach:** Cover-Bild ergänzen, dann Scheduled Function für 1x tägliche automatische
-Erzeugung bauen (Tageskontingent von 10 reicht dafür locker).
+**Danach:** Cover-Art/Range-Fixes deployen und verifizieren (siehe „Aktueller Stand"),
+dann Scheduled Function für 1x tägliche automatische Erzeugung bauen (Tageskontingent
+von 10 reicht dafür locker).

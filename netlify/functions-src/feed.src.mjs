@@ -3,6 +3,8 @@ import { getStore } from "@netlify/blobs";
 const CHANNEL_TITLE = "Spanisch-Lektionen";
 const CHANNEL_DESCRIPTION = "Automatisch erzeugte spanische Hör-Lektionen für unterwegs – zum freihändigen Anhören beim Autofahren, Kochen oder Putzen.";
 const CHANNEL_LANGUAGE = "de-de";
+const CHANNEL_AUTHOR = "Spanisch-Lektionen";
+const COVER_IMAGE_PATH = "/cover.jpg";
 
 function escapeXml(str) {
   return String(str).replace(/[<>&'"]/g, (c) => ({
@@ -56,6 +58,7 @@ var feed_src_default = async (req) => {
     </item>`;
     }).join("");
 
+    const coverUrl = `${origin}${COVER_IMAGE_PATH}`;
     const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
   <channel>
@@ -64,7 +67,14 @@ var feed_src_default = async (req) => {
     <description>${escapeXml(CHANNEL_DESCRIPTION)}</description>
     <language>${CHANNEL_LANGUAGE}</language>
     <itunes:explicit>false</itunes:explicit>
-    <itunes:category text="Education" />${items}
+    <itunes:category text="Education" />
+    <itunes:author>${escapeXml(CHANNEL_AUTHOR)}</itunes:author>
+    <itunes:image href="${escapeXml(coverUrl)}" />
+    <image>
+      <url>${escapeXml(coverUrl)}</url>
+      <title>${escapeXml(CHANNEL_TITLE)}</title>
+      <link>${escapeXml(origin)}</link>
+    </image>${items}
   </channel>
 </rss>`;
 

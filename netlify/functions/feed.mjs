@@ -1,4 +1,4 @@
-// node_modules/@netlify/runtime-utils/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/9fea6763-9213-4cce-a674-35b91114325c/scratchpad/esbuild-work/node_modules/@netlify/runtime-utils/dist/main.js
 var getString = (input) => typeof input === "string" ? input : JSON.stringify(input);
 var base64Decode = globalThis.Buffer ? (input) => Buffer.from(input, "base64").toString() : (input) => atob(input);
 var base64Encode = globalThis.Buffer ? (input) => Buffer.from(getString(input)).toString("base64") : (input) => btoa(getString(input));
@@ -17,7 +17,7 @@ var getEnvironment = () => {
   };
 };
 
-// node_modules/@netlify/otel/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/9fea6763-9213-4cce-a674-35b91114325c/scratchpad/esbuild-work/node_modules/@netlify/otel/dist/main.js
 var GET_TRACER = "__netlify__getTracer";
 var getTracer = (name, version) => {
   return globalThis[GET_TRACER]?.(name, version);
@@ -33,7 +33,7 @@ function withActiveSpan(tracer, name, optionsOrFn, contextOrFn, fn) {
   return tracer.withActiveSpan(name, optionsOrFn, contextOrFn, func);
 }
 
-// node_modules/@netlify/blobs/dist/chunk-YAGWSQMB.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/9fea6763-9213-4cce-a674-35b91114325c/scratchpad/esbuild-work/node_modules/@netlify/blobs/dist/chunk-YAGWSQMB.js
 var getEnvironmentContext = () => {
   const context = globalThis.netlifyBlobsContext || getEnvironment().get("NETLIFY_BLOBS_CONTEXT");
   if (typeof context !== "string" || !context) {
@@ -331,7 +331,7 @@ var getClientOptions = (options, contextOverride) => {
   return clientOptions;
 };
 
-// node_modules/@netlify/blobs/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/9fea6763-9213-4cce-a674-35b91114325c/scratchpad/esbuild-work/node_modules/@netlify/blobs/dist/main.js
 var DEPLOY_STORE_PREFIX = "deploy:";
 var LEGACY_STORE_INTERNAL_PREFIX = "netlify-internal/legacy-namespace/";
 var SITE_STORE_PREFIX = "site:";
@@ -775,10 +775,12 @@ var getStore = (input, options) => {
   );
 };
 
-// feed.src.mjs
+// netlify/functions-src/feed.src.mjs
 var CHANNEL_TITLE = "Spanisch-Lektionen";
 var CHANNEL_DESCRIPTION = "Automatisch erzeugte spanische H\xF6r-Lektionen f\xFCr unterwegs \u2013 zum freih\xE4ndigen Anh\xF6ren beim Autofahren, Kochen oder Putzen.";
 var CHANNEL_LANGUAGE = "de-de";
+var CHANNEL_AUTHOR = "Spanisch-Lektionen";
+var COVER_IMAGE_PATH = "/cover.jpg";
 function escapeXml(str) {
   return String(str).replace(/[<>&'"]/g, (c) => ({
     "<": "&lt;",
@@ -825,6 +827,7 @@ var feed_src_default = async (req) => {
       <enclosure url="${escapeXml(enclosureUrl)}" length="${bytes}" type="audio/mpeg" />
     </item>`;
     }).join("");
+    const coverUrl = `${origin}${COVER_IMAGE_PATH}`;
     const rss = `<?xml version="1.0" encoding="UTF-8"?>
 <rss version="2.0" xmlns:itunes="http://www.itunes.com/dtds/podcast-1.0.dtd">
   <channel>
@@ -833,7 +836,14 @@ var feed_src_default = async (req) => {
     <description>${escapeXml(CHANNEL_DESCRIPTION)}</description>
     <language>${CHANNEL_LANGUAGE}</language>
     <itunes:explicit>false</itunes:explicit>
-    <itunes:category text="Education" />${items}
+    <itunes:category text="Education" />
+    <itunes:author>${escapeXml(CHANNEL_AUTHOR)}</itunes:author>
+    <itunes:image href="${escapeXml(coverUrl)}" />
+    <image>
+      <url>${escapeXml(coverUrl)}</url>
+      <title>${escapeXml(CHANNEL_TITLE)}</title>
+      <link>${escapeXml(origin)}</link>
+    </image>${items}
   </channel>
 </rss>`;
     return new Response(rss, { headers: { "content-type": "application/rss+xml; charset=utf-8" } });

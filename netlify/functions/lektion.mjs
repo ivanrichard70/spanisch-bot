@@ -1,4 +1,4 @@
-// node_modules/@netlify/runtime-utils/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/9fea6763-9213-4cce-a674-35b91114325c/scratchpad/esbuild-work/node_modules/@netlify/runtime-utils/dist/main.js
 var getString = (input) => typeof input === "string" ? input : JSON.stringify(input);
 var base64Decode = globalThis.Buffer ? (input) => Buffer.from(input, "base64").toString() : (input) => atob(input);
 var base64Encode = globalThis.Buffer ? (input) => Buffer.from(getString(input)).toString("base64") : (input) => btoa(getString(input));
@@ -17,7 +17,7 @@ var getEnvironment = () => {
   };
 };
 
-// node_modules/@netlify/otel/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/9fea6763-9213-4cce-a674-35b91114325c/scratchpad/esbuild-work/node_modules/@netlify/otel/dist/main.js
 var GET_TRACER = "__netlify__getTracer";
 var getTracer = (name, version) => {
   return globalThis[GET_TRACER]?.(name, version);
@@ -33,7 +33,7 @@ function withActiveSpan(tracer, name, optionsOrFn, contextOrFn, fn) {
   return tracer.withActiveSpan(name, optionsOrFn, contextOrFn, func);
 }
 
-// node_modules/@netlify/blobs/dist/chunk-YAGWSQMB.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/9fea6763-9213-4cce-a674-35b91114325c/scratchpad/esbuild-work/node_modules/@netlify/blobs/dist/chunk-YAGWSQMB.js
 var getEnvironmentContext = () => {
   const context = globalThis.netlifyBlobsContext || getEnvironment().get("NETLIFY_BLOBS_CONTEXT");
   if (typeof context !== "string" || !context) {
@@ -331,7 +331,7 @@ var getClientOptions = (options, contextOverride) => {
   return clientOptions;
 };
 
-// node_modules/@netlify/blobs/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/9fea6763-9213-4cce-a674-35b91114325c/scratchpad/esbuild-work/node_modules/@netlify/blobs/dist/main.js
 var DEPLOY_STORE_PREFIX = "deploy:";
 var LEGACY_STORE_INTERNAL_PREFIX = "netlify-internal/legacy-namespace/";
 var SITE_STORE_PREFIX = "site:";
@@ -775,7 +775,7 @@ var getStore = (input, options) => {
   );
 };
 
-// lektion.src.mjs
+// netlify/functions-src/lektion.src.mjs
 var lektion_src_default = async (req) => {
   try {
     const url = new URL(req.url);
@@ -786,7 +786,38 @@ var lektion_src_default = async (req) => {
     if (!ab) {
       return new Response("Noch keine Lektion vorhanden. Rufe zuerst /.netlify/functions/generate-background auf und warte ~1 Minute.", { status: 404 });
     }
-    return new Response(ab, { headers: { "content-type": "audio/mpeg" } });
+    const total = ab.byteLength;
+    const range = req.headers.get("range");
+    if (range) {
+      const match = /^bytes=(\d*)-(\d*)$/.exec(range);
+      if (match) {
+        const start = match[1] ? parseInt(match[1], 10) : 0;
+        const end = match[2] ? parseInt(match[2], 10) : total - 1;
+        if (start >= 0 && end < total && start <= end) {
+          const chunk = ab.slice(start, end + 1);
+          return new Response(chunk, {
+            status: 206,
+            headers: {
+              "content-type": "audio/mpeg",
+              "content-range": `bytes ${start}-${end}/${total}`,
+              "content-length": String(chunk.byteLength),
+              "accept-ranges": "bytes"
+            }
+          });
+        }
+        return new Response(null, {
+          status: 416,
+          headers: { "content-range": `bytes */${total}` }
+        });
+      }
+    }
+    return new Response(ab, {
+      headers: {
+        "content-type": "audio/mpeg",
+        "content-length": String(total),
+        "accept-ranges": "bytes"
+      }
+    });
   } catch (e) {
     return new Response("FEHLER: " + e.message, { status: 500 });
   }
