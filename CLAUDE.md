@@ -24,11 +24,39 @@ Aktueller Fokus: der **Audio-Weg** (Lektionen zum Anhören).
 
 Kern-Designentscheidung: **Erzeugen** und **Ausliefern** sind getrennt, weil das
 Erzeugen ~30–40 Sek dauert (zu lang für eine normale Funktion mit ~10–26 Sek Limit).
+Aus demselben Grund sind **Scheduling** (Cron) und **eigentliche Erzeugung** ebenfalls
+getrennt: Netlify Scheduled Functions haben ein hartes 30-Sek-Limit und lassen sich
+NICHT mit dem `-background`-Suffix (15 Min Laufzeit) kombinieren (offiziell gegenseitig
+ausgeschlossen) – daher stößt eine schlanke Scheduled Function nur eine separate
+Background-Funktion per HTTP an, statt selbst zu generieren.
 
-- **`netlify/functions/generate-background.mjs`** – Hintergrund-Funktion (Name endet
-  auf `-background` – bis 15 Min Laufzeit erlaubt). Erzeugt Skript (Claude) – TTS
-  (Gemini) – schneidet End-Stille ab – MP3 (lamejs) – speichert in Blobs sowohl unter
-  `latest` als auch unter `episodes/<Zeitstempel>.mp3` (Episoden-Historie).
+- **`netlify/functions-src/lesson-generator.src.mjs`** – gemeinsame Kernlogik (kein
+  eigener Endpunkt): Skript (Claude) – TTS (Gemini) – schneidet End-Stille ab – MP3
+  (lamejs). Wird sowohl von `generate-background.mjs` als auch von
+  `generate-daily-background.mjs` importiert (Single Source of Truth für Prompt,
+  Themen-Liste, Claude-/Gemini-Aufruf, PCM→MP3-Konvertierung).
+- **`netlify/functions/generate-background.mjs`** (Quelle: `generate-background.src.mjs`)
+  – Hintergrund-Funktion (Name endet auf `-background` – bis 15 Min Laufzeit erlaubt).
+  Manueller Einzel-Trigger: erzeugt genau **eine** Lektion (Thema per Rotation aus der
+  bisherigen Episoden-Anzahl), speichert in Blobs sowohl unter `latest` als auch unter
+  `episodes/<Zeitstempel>.mp3` (Episoden-Historie).
+- **`netlify/functions/generate-daily-background.mjs`** (Quelle:
+  `generate-daily-background.src.mjs`) – Hintergrund-Funktion für die **tägliche
+  Batch-Erzeugung** von 5 Lektionen. Berechnet alle 5 Themen EINMALIG vorab aus der
+  aktuellen Episoden-Anzahl (nicht nach jeder Einzel-Erzeugung neu), erzeugt dann alle
+  5 **parallel** (`Promise.allSettled`) – damit bleibt die Gesamtlaufzeit nah an der
+  einer Einzel-Erzeugung (statt 5× hintereinander, was das 15-Min-Limit riskieren würde)
+  und zwei gleichzeitige Themen-Berechnungen können sich nicht in die Quere kommen.
+  Setzt `latest` am Ende explizit auf die tatsächlich neueste der erfolgreich erzeugten
+  Episoden (Timestamp-Vergleich) – bei paralleler Erzeugung ist die Fertigstellungs-
+  Reihenfolge nicht deterministisch.
+- **`netlify/functions/generate-daily-trigger.mjs`** (Quelle:
+  `generate-daily-trigger.src.mjs`) – **Scheduled Function**, `export const config =
+  { schedule: "0 3 * * *" }` (täglich 03:00 UTC, läuft immer in UTC, keine automatische
+  Sommerzeit-Anpassung). Ruft nur `generate-daily-background` per `fetch()` auf und
+  wartet nicht auf dessen Fertigstellung (Background Functions antworten sofort mit
+  202 „Accepted"). Braucht `process.env.URL` (von Netlify automatisch gesetzt) oder
+  fällt auf die feste Produktions-URL zurück.
 - **`netlify/functions/lektion.mjs`** (Quelle: `lektion.src.mjs`) – liest eine MP3 aus
   Blobs und gibt sie als `audio/mpeg` zurück. Ohne Parameter: `latest`. Mit
   `?id=episodes/<Zeitstempel>.mp3`: genau diese Episode (für die Enclosure-URLs im
@@ -39,8 +67,10 @@ Erzeugen ~30–40 Sek dauert (zu lang für eine normale Funktion mit ~10–26 Se
   `episodes/` und erzeugt daraus einen RSS-2.0-Feed (iTunes-Tags, inkl. `itunes:image`/
   `itunes:author`) zum Abonnieren in Podcast-Apps. Braucht keine API-Keys.
 
-Drei Endpunkte (online):
-- Erzeugen: `/.netlify/functions/generate-background` (liefert 202 „Accepted", läuft im Hintergrund)
+Endpunkte (online):
+- Erzeugen (1 Lektion, manuell): `/.netlify/functions/generate-background` (liefert 202 „Accepted", läuft im Hintergrund)
+- Erzeugen (5 Lektionen, Batch – normalerweise nur vom Scheduler aufgerufen): `/.netlify/functions/generate-daily-background`
+- Automatisch täglich 03:00 UTC: `generate-daily-trigger` (Scheduled Function, kein manueller Aufruf nötig)
 - Anhören (aktuellste Lektion): `/.netlify/functions/lektion`
 - Anhören (bestimmte Episode): `/.netlify/functions/lektion?id=episodes/<Zeitstempel>.mp3`
 - Abonnieren (RSS): `/.netlify/functions/feed`
@@ -89,8 +119,11 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   Prompt, Stimme) können direkt in der Datei gemacht werden. Bei größeren Änderungen an
   der Logik: aus lesbarer Quelle neu mit esbuild bündeln
   (`esbuild <src> --bundle --platform=node --format=esm --outfile=<ziel>`).
-- **`netlify/functions-src/feed.src.mjs` und `netlify/functions-src/lektion.src.mjs`
-  sind die lesbaren Quellen von `feed.mjs` bzw. `lektion.mjs`.**
+- **Alle deployten Funktionen haben mittlerweile eine lesbare Quelle in
+  `netlify/functions-src/`:** `feed.src.mjs`, `lektion.src.mjs`,
+  `generate-background.src.mjs`, `generate-daily-background.src.mjs`,
+  `generate-daily-trigger.src.mjs`, plus `lesson-generator.src.mjs` (gemeinsame
+  Kernlogik, kein eigener Endpunkt – siehe „Architektur").
   WICHTIG: Quelldateien dürfen NIE in `netlify/functions/` liegen – Netlify behandelt
   jede Datei dort als eigene Funktion, und ein Punkt im Dateinamen (z. B. `feed.src.mjs`)
   ergibt einen ungültigen Funktionsnamen und lässt den Deploy fehlschlagen (bereits
@@ -98,14 +131,19 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   Änderungen an deren Logik: `.src.mjs` dort bearbeiten, dann neu bündeln, z. B.
   (`esbuild netlify/functions-src/feed.src.mjs --bundle --platform=node --format=esm
   --outfile=netlify/functions/feed.mjs`) – nicht nur die gebündelte Datei direkt patchen,
-  sonst laufen Quelle und Bundle auseinander. Zum Bündeln wird `@netlify/blobs` als
-  Node-Modul benötigt (im Repo selbst kein `node_modules`/`package.json` vorhanden) –
-  ggf. temporär in einem Scratch-Verzeichnis installieren und via `NODE_PATH`
-  einbinden, z. B. `NODE_PATH=<scratch>/node_modules npx esbuild …`.
-- **`generate-background.mjs` hat (Stand jetzt) keine lesbare `.src.mjs`-Quelle** –
-  bei größeren Änderungen daran ggf. zuerst eine `generate-background.src.mjs` in
-  `netlify/functions-src/` anlegen (Logik steht am Dateiende der gebündelten Datei,
-  ab dem Kommentar `// generate-background.src.mjs`), dann wie oben bündeln.
+  sonst laufen Quelle und Bundle auseinander. Zum Bündeln werden `@netlify/blobs` und
+  (für die Erzeugungs-Funktionen) `@breezystack/lamejs` als Node-Module benötigt (im
+  Repo selbst kein `node_modules`/`package.json` vorhanden) – ggf. temporär in einem
+  Scratch-Verzeichnis installieren und via `NODE_PATH` einbinden, z. B.
+  `NODE_PATH=<scratch>/node_modules npx esbuild …`.
+- **Scheduled Functions (Netlify) haben ein hartes 30-Sek-Limit und lassen sich NICHT
+  mit dem `-background`-Namenssuffix kombinieren** (offiziell gegenseitig
+  ausgeschlossen, s. Netlify-Doku). Deshalb: die eigentliche Lektions-Erzeugung liegt
+  in `generate-daily-background.mjs` (Background Function, per HTTP aufrufbar, 15 Min
+  Limit), und `generate-daily-trigger.mjs` (Scheduled Function, `export const config =
+  { schedule: "..." }`) ruft diese nur per `fetch()` auf, ohne auf Fertigstellung zu
+  warten. Cron läuft immer in UTC, keine automatische Sommerzeit-Anpassung – bei
+  Bedarf `schedule` in `generate-daily-trigger.src.mjs` anpassen und neu bündeln.
 - **`cover.jpg` liegt im Repo-Root** (nicht in `netlify/functions*`) – es gibt **keine
   `netlify.toml`**, Netlify nutzt daher das Repo-Root als Publish-Verzeichnis (Default
   ohne Build-Konfiguration). Ausgeliefert unter `https://spanishforivi.netlify.app/cover.jpg`.
@@ -118,12 +156,13 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   0,3 s Auslauf bleibt).
 - **Gemini-TTS-Tageskontingent: 10 Anfragen/Tag** (kostenloser Tarif von
   `gemini-2.5-flash-preview-tts`, Preview-Modelle haben oft enge Limits). Danach schlagen
-  alle `generate-background`-Aufrufe kommentarlos fehl (kein Audio, kein Fehler-Log in
+  alle Erzeugungs-Aufrufe kommentarlos fehl (kein Audio, kein Fehler-Log in
   Netlify sichtbar – nur in Google AI Studio unter Kontingenten erkennbar, z. B. „11 / 10").
-  Reset vermutlich Mitternacht Pacific Time. Bei Massen-Erzeugung mehrerer Lektionen
-  hintereinander: **max. ~9 pro Tag einplanen** (ein Puffer, da auch fehlgeschlagene
-  Versuche zählen), Rest am Folgetag nachholen. Für den späteren Normalbetrieb
-  (1x täglich automatisch) ist das Limit unkritisch.
+  Reset vermutlich Mitternacht Pacific Time. Die tägliche Scheduled Function erzeugt
+  bewusst nur **5** Lektionen/Tag (statt bis zu 10), damit Puffer für manuelle Aufrufe/
+  Tests am selben Tag bleibt. Bei manueller Massen-Erzeugung zusätzlich zur Batch-Funktion:
+  **Gesamt (Batch + manuell) max. ~9 pro Tag einplanen** (ein Puffer, da auch
+  fehlgeschlagene Versuche zählen).
 - **Credits:** Jeder Netlify-Deploy kostet Credits. Möglichst lokal / im Codespace mit
   `netlify dev` testen und selten deployen.
 - **Fehlerausgabe:** Die Funktionen loggen Fehler als `CLAUDE-FEHLER`, `GEMINI-FEHLER`,
@@ -179,13 +218,25 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   `cover.jpg` lädt (200, image/jpeg), `lektion` liefert bei `Range: bytes=...` korrekt
   `206` + `content-range`-Header.
 
+- **Tägliche automatische Batch-Erzeugung (2026-07-21 gebaut, noch nicht deployed/
+  verifiziert):** `generate-daily-trigger.mjs` (Scheduled Function, täglich 03:00 UTC)
+  stößt `generate-daily-background.mjs` an, das 5 Lektionen parallel erzeugt (Themen
+  vorab aus der aktuellen Episoden-Anzahl berechnet, `latest` danach deterministisch
+  auf die neueste gesetzt). Gemeinsame Erzeugungslogik in `lesson-generator.src.mjs`
+  ausgelagert; `generate-background.mjs` (manueller Einzel-Trigger) nutzt dieselbe
+  Logik und verhält sich unverändert. **Nach Deploy prüfen:** Funktions-Liste im
+  Netlify-Dashboard zeigt `generate-daily-trigger` mit „Scheduled"-Badge und
+  nächstem Ausführungszeitpunkt; per „Run now" testweise auslösen und danach im
+  Feed/Blobs kontrollieren, ob 5 neue Episoden mit unterschiedlichen Themen
+  auftauchen (nicht 5× dasselbe Thema).
+
 **Bekannte Lücken im Feed (bewusst zurückgestellt):**
 - `feed.mjs` macht pro Aufruf eine `getMetadata`-Anfrage je Episode (N HEAD-Requests).
   Bei manueller/seltener Erzeugung unkritisch; bei vielen Episoden ggf. später cachen.
-
-**Als Nächstes zu bauen:**
-1. **Scheduled Function** – täglich automatisch eine neue Lektion erzeugen (aktuell
-   bewusst manuell, siehe unten).
+- Nur 10 Themen in `TOPICS` (`lesson-generator.src.mjs`) – bei 5 neuen Episoden/Tag
+  wiederholen sich Themen bereits nach 2 Tagen (Claude erzeugt zwar jedes Mal einen
+  neuen Dialog zum selben Thema, aber das Thema selbst ist nicht mehr neu). Bei Bedarf
+  `TOPICS`-Array erweitern.
 
 **Spätere Ausbaustufen:**
 - Lernermodell: Wortschatz & Schwächen mitführen, Lektionen daran anpassen
@@ -202,20 +253,17 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 
 ## Nächster konkreter Schritt
 
-Deploy und Feed funktionieren (`/.netlify/functions/feed` liefert gültiges RSS, in
-Apple Podcasts abonniert). Themenrotation ist live. Beim Befüllen mit einem
-Start-Vorrat (Ziel: 15 Lektionen) griff nach 9 erfolgreichen Erzeugungen das
-Gemini-TTS-Tageskontingent (10/Tag, siehe „Konventionen & Stolpersteine") – **9 von 15
-Lektionen sind fertig**, die restlichen 6 fehlen noch.
+Die tägliche Batch-Erzeugung (`generate-daily-trigger` + `generate-daily-background`,
+siehe „Aktueller Stand") ist gebaut und lokal syntaktisch geprüft, aber **noch nicht
+deployed**. Nächster Schritt: committen/pushen, Deploy abwarten, dann im
+Netlify-Dashboard unter Functions prüfen, ob `generate-daily-trigger` als „Scheduled"
+mit korrektem nächsten Ausführungszeitpunkt (03:00 UTC) gelistet ist. Per „Run now"
+einmal manuell auslösen und danach `/.netlify/functions/feed` bzw. die Blobs
+kontrollieren: Es sollten 5 neue Episoden mit 5 unterschiedlichen Themen erscheinen,
+und `/.netlify/functions/lektion` (ohne Parameter) sollte die zeitlich neueste davon
+liefern.
 
-**Um fortzusetzen (an einem neuen Tag, nach Kontingent-Reset):** 6x
-`https://spanishforivi.netlify.app/.netlify/functions/generate-background` aufrufen,
-zwischen den Aufrufen jeweils warten, bis die vorherige Episode im Feed auftaucht
-(nicht parallel feuern – sonst berechnen mehrere Aufrufe gleichzeitig denselben
-Rotations-Index aus `TOPICS[bisherige-Episoden-Anzahl % TOPICS.length]` und erzeugen
-doppelte Themen). Jeder Aufruf dauert eher 1,5–3 Min als die ursprünglich angenommenen
-30–40 Sek – beim Warten großzügig timeouten (mind. 200s), bevor man einen Fehler
-vermutet.
-
-**Danach:** Scheduled Function für 1x tägliche automatische Erzeugung bauen
-(Tageskontingent von 10 reicht dafür locker).
+Falls dabei die 6 ursprünglich fehlenden Start-Lektionen (Ziel war 15, 9 sind fertig)
+nicht mit abgedeckt werden sollen: weiterhin bei Bedarf manuell
+`https://spanishforivi.netlify.app/.netlify/functions/generate-background` aufrufen
+(Einzel-Trigger, unverändertes Verhalten).

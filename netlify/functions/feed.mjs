@@ -1,4 +1,4 @@
-// ../../tmp/claude-1000/-workspaces-spanisch-bot/9fea6763-9213-4cce-a674-35b91114325c/scratchpad/esbuild-work/node_modules/@netlify/runtime-utils/dist/main.js
+// node_modules/@netlify/runtime-utils/dist/main.js
 var getString = (input) => typeof input === "string" ? input : JSON.stringify(input);
 var base64Decode = globalThis.Buffer ? (input) => Buffer.from(input, "base64").toString() : (input) => atob(input);
 var base64Encode = globalThis.Buffer ? (input) => Buffer.from(getString(input)).toString("base64") : (input) => btoa(getString(input));
@@ -17,7 +17,7 @@ var getEnvironment = () => {
   };
 };
 
-// ../../tmp/claude-1000/-workspaces-spanisch-bot/9fea6763-9213-4cce-a674-35b91114325c/scratchpad/esbuild-work/node_modules/@netlify/otel/dist/main.js
+// node_modules/@netlify/otel/dist/main.js
 var GET_TRACER = "__netlify__getTracer";
 var getTracer = (name, version) => {
   return globalThis[GET_TRACER]?.(name, version);
@@ -33,7 +33,7 @@ function withActiveSpan(tracer, name, optionsOrFn, contextOrFn, fn) {
   return tracer.withActiveSpan(name, optionsOrFn, contextOrFn, func);
 }
 
-// ../../tmp/claude-1000/-workspaces-spanisch-bot/9fea6763-9213-4cce-a674-35b91114325c/scratchpad/esbuild-work/node_modules/@netlify/blobs/dist/chunk-YAGWSQMB.js
+// node_modules/@netlify/blobs/dist/chunk-YAGWSQMB.js
 var getEnvironmentContext = () => {
   const context = globalThis.netlifyBlobsContext || getEnvironment().get("NETLIFY_BLOBS_CONTEXT");
   if (typeof context !== "string" || !context) {
@@ -331,7 +331,7 @@ var getClientOptions = (options, contextOverride) => {
   return clientOptions;
 };
 
-// ../../tmp/claude-1000/-workspaces-spanisch-bot/9fea6763-9213-4cce-a674-35b91114325c/scratchpad/esbuild-work/node_modules/@netlify/blobs/dist/main.js
+// node_modules/@netlify/blobs/dist/main.js
 var DEPLOY_STORE_PREFIX = "deploy:";
 var LEGACY_STORE_INTERNAL_PREFIX = "netlify-internal/legacy-namespace/";
 var SITE_STORE_PREFIX = "site:";

@@ -10625,23 +10625,41 @@ async function generateEpisodeAudio(topic) {
   return pcmToMp3(part.data, rate);
 }
 
-// netlify/functions-src/generate-background.src.mjs
-var generate_background_src_default = async () => {
-  try {
-    const store = getStore("lektionen");
-    const { blobs } = await store.list({ prefix: "episodes/" });
-    const topic = TOPICS[blobs.length % TOPICS.length];
-    const mp3 = await generateEpisodeAudio(topic);
-    const ab = mp3.buffer.slice(mp3.byteOffset, mp3.byteOffset + mp3.byteLength);
-    const created = (/* @__PURE__ */ new Date()).toISOString();
-    const episodeKey = `episodes/${created.replace(/[:.]/g, "-")}.mp3`;
-    await store.set(episodeKey, ab, { metadata: { created, bytes: mp3.length, topic } });
-    await store.set("latest", ab, { metadata: { created, bytes: mp3.length, topic } });
-    console.log("Lektion gespeichert:", mp3.length, "bytes ->", episodeKey, "| Thema:", topic);
-  } catch (e) {
-    console.error("ALLGEMEINER FEHLER:", e.message);
+// netlify/functions-src/generate-daily-background.src.mjs
+var EPISODES_PER_DAY = 5;
+async function generateAndStore(store, topic) {
+  const mp3 = await generateEpisodeAudio(topic);
+  const ab = mp3.buffer.slice(mp3.byteOffset, mp3.byteOffset + mp3.byteLength);
+  const created = (/* @__PURE__ */ new Date()).toISOString();
+  const episodeKey = `episodes/${created.replace(/[:.]/g, "-")}.mp3`;
+  await store.set(episodeKey, ab, { metadata: { created, bytes: mp3.length, topic } });
+  return { episodeKey, created, ab, bytes: mp3.length, topic };
+}
+var generate_daily_background_src_default = async () => {
+  const store = getStore("lektionen");
+  const { blobs } = await store.list({ prefix: "episodes/" });
+  const baseCount = blobs.length;
+  const topics = Array.from({ length: EPISODES_PER_DAY }, (_, i) => TOPICS[(baseCount + i) % TOPICS.length]);
+  const results = await Promise.allSettled(topics.map((topic) => generateAndStore(store, topic)));
+  const successes = [];
+  results.forEach((r, i) => {
+    if (r.status === "fulfilled") {
+      successes.push(r.value);
+      console.log("Lektion gespeichert:", topics[i], "->", r.value.episodeKey);
+    } else {
+      console.error("FEHLER bei Thema", topics[i], ":", r.reason?.message ?? r.reason);
+    }
+  });
+  if (successes.length === 0) {
+    console.error("ALLGEMEINER FEHLER: keine der", EPISODES_PER_DAY, "Lektionen konnte erzeugt werden");
+    return;
   }
+  const newest = successes.reduce((a, b) => a.created > b.created ? a : b);
+  await store.set("latest", newest.ab, {
+    metadata: { created: newest.created, bytes: newest.bytes, topic: newest.topic }
+  });
+  console.log(`Tages-Erzeugung fertig: ${successes.length}/${EPISODES_PER_DAY} Lektionen, "latest" ->`, newest.episodeKey);
 };
 export {
-  generate_background_src_default as default
+  generate_daily_background_src_default as default
 };
