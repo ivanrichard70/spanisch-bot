@@ -34,7 +34,10 @@ Background-Funktion per HTTP an, statt selbst zu generieren.
   eigener Endpunkt): Skript (Claude) – TTS (Gemini) – schneidet End-Stille ab – MP3
   (lamejs). Wird sowohl von `generate-background.mjs` als auch von
   `generate-daily-background.mjs` importiert (Single Source of Truth für Prompt,
-  Themen-Liste, Claude-/Gemini-Aufruf, PCM→MP3-Konvertierung).
+  Curriculum/Themen, Claude-/Gemini-Aufruf, PCM→MP3-Konvertierung). Enthält das
+  **Curriculum** (`CURRICULUM`-Array, s. „Themenrotation & Niveau-Progression" unter
+  „Aktueller Stand") und `pickForIndex(n)`, das aus der n-ten Episode Thema, Niveau
+  und passenden System-Prompt bestimmt.
 - **`netlify/functions/generate-background.mjs`** (Quelle: `generate-background.src.mjs`)
   – Hintergrund-Funktion (Name endet auf `-background` – bis 15 Min Laufzeit erlaubt).
   Manueller Einzel-Trigger: erzeugt genau **eine** Lektion (Thema per Rotation aus der
@@ -203,10 +206,22 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   `/.netlify/functions/lektion?id=episodes/<Zeitstempel>.mp3`, das `lektion.mjs` jetzt
   zusätzlich zu `latest` unterstützt. Episoden-Titel im Feed zeigen das Thema
   (`Spanisch-Lektion: <Thema>`), Fallback aufs Datum bei alten Episoden ohne Thema-Metadatum.
-- **Themenrotation:** `TOPICS`-Array in `lesson-generator.src.mjs` (10 Alltagsthemen, A1).
-  Bei jedem Aufruf wird `TOPICS[bisherige-Episoden-Anzahl % TOPICS.length]` gewählt – kein
-  Zufall, sondern deterministisch reihum, rein aus der Anzahl vorhandener `episodes/`-Blobs
-  berechnet (kein separater Zähler nötig). Thema wird auch in den Blob-Metadaten gespeichert.
+- **Themenrotation & Niveau-Progression (2026-07-21 gebaut, deployed & lokal
+  verifiziert – realer Effekt noch nicht live beobachtet):** `CURRICULUM`-Array in
+  `lesson-generator.src.mjs` ersetzt das alte flache `TOPICS`-Array. Themen sind in
+  Blöcken nach Niveau sortiert (A1: 15 Themen, A2/B1/B2/C1: je 10 Themen, jeder Block
+  mit eigenem System-Prompt – Tempo/Übersetzungsanteil/Grammatik-Komplexität steigen
+  von Block zu Block). `pickForIndex(n)` (n = Anzahl bisheriger Episoden) arbeitet
+  sich block für block durch: ein Thema wiederholt sich erst, wenn sein ganzer
+  Niveau-Block durch ist, UND das Niveau steigt automatisch mit der Zeit. Ist der
+  letzte Block (C1) einmal komplett durch, wird nur noch er zyklisch wiederholt (kein
+  Rücksprung auf A1, aber auch kein endloses Steigern über C1 hinaus). Sowohl `topic`
+  als auch `level` werden in den Blob-Metadaten gespeichert und im Feed-Titel
+  angezeigt (`Spanisch-Lektion (B1): <Thema>`). Grund: Nutzer-Feedback nach dem ersten
+  Batch-Testlauf – Themen wiederholten sich zu schnell und blieben immer auf A1-Niveau.
+  Auslöser für den nächsten Niveau-Sprung ist rein die Episoden-**Anzahl**, nicht
+  irgendeine Qualitätsmessung – bei genau 15/25/35/45 erzeugten Episoden springt das
+  Niveau, unabhängig davon ob der Nutzer die vorherigen wirklich gehört hat.
 
 - **Cover-Art & Range-Requests (2026-07-19 behoben, deployed & verifiziert):** Feedback
   (vermutlich aus einem Podcast-Validator) bemängelte fehlendes `<itunes:image>` (Pflichtfeld
@@ -235,37 +250,36 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 **Bekannte Lücken im Feed (bewusst zurückgestellt):**
 - `feed.mjs` macht pro Aufruf eine `getMetadata`-Anfrage je Episode (N HEAD-Requests).
   Bei manueller/seltener Erzeugung unkritisch; bei vielen Episoden ggf. später cachen.
-- Nur 10 Themen in `TOPICS` (`lesson-generator.src.mjs`) – bei 5 neuen Episoden/Tag
-  wiederholen sich Themen bereits nach 2 Tagen (Claude erzeugt zwar jedes Mal einen
-  neuen Dialog zum selben Thema, aber das Thema selbst ist nicht mehr neu). Bei Bedarf
-  `TOPICS`-Array erweitern.
+- Nach dem C1-Block (Episode 45+) wiederholen sich dessen 10 Themen alle 2 Tage (bei
+  5/Tag) endlos – das Niveau steigt dann nicht mehr weiter. Bei Bedarf `CURRICULUM` in
+  `lesson-generator.src.mjs` um weitere C1-Themen (oder einen weiteren Block) ergänzen.
 
 **Spätere Ausbaustufen:**
 - Lernermodell: Wortschatz & Schwächen mitführen, Lektionen daran anpassen
   (z. B. gezielt Fragewörter üben).
 - Optionaler Gesprächs-Modus (Sprechen + Antworten) für Situationen mit freien Händen.
-- **Grammatik-Lektionen & fortgeschrittene Gespräche (B1+):** in denselben Feed gemischt
-  mit den A1-Alltagsdialogen (bewusste Entscheidung des Nutzers – nicht als separater Feed
-  pro Level). Umsetzung voraussichtlich: `TOPICS`-Einträge um `level`/`type` erweitern
-  (z. B. `{ topic, level: "A1"|"B1", type: "dialog"|"grammatik" }`) und passend dazu
-  mehrere `SYSTEM`-Prompt-Varianten (Tempo, Übersetzungsanteil, Erklärungstiefe unterscheiden
-  sich je nach Level/Typ deutlich vom aktuellen A1-Dialog-Prompt).
+- **Grammatik-Lektionen als eigener `type` (z. B. `"dialog"` vs. `"grammatik"`):** die
+  Niveau-Progression (A1→C1) ist jetzt umgesetzt (s. „Themenrotation & Niveau-
+  Progression"), aber alle Blöcke sind noch reine Alltags-/Gesprächs-Dialoge. Eine
+  eigene `type`-Dimension fürs gezielte Grammatik-Üben (mit wieder eigenen
+  System-Prompt-Varianten) ist weiterhin offen, gemischt in denselben Feed
+  (bewusste Entscheidung des Nutzers – nicht als separater Feed pro Level/Typ).
 
 ---
 
 ## Nächster konkreter Schritt
 
-Die tägliche Batch-Erzeugung ist deployed und per manuellem Testlauf verifiziert
-(siehe „Aktueller Stand", 14 von 15 Start-Lektionen fertig). Es fehlt noch die
-Bestätigung, dass der **automatische Cron-Trigger** selbst zuverlässig läuft (nicht
-nur der manuell angestoßene `generate-daily-background`-Aufruf). Nach der ersten
-Nacht (ab 03:00 UTC) prüfen:
-- Ist eine neue Fünfer-Charge im Feed aufgetaucht, ohne dass jemand manuell etwas
-  aufgerufen hat?
-- Im Netlify-Dashboard unter Functions: läuft `generate-daily-trigger` als
-  „Scheduled" mit plausiblem letzten/nächsten Ausführungszeitpunkt, keine Fehler im
-  Log?
+Zwei Dinge sind gebaut/deployed, aber noch nicht durch einen echten unbeaufsichtigten
+Lauf bestätigt:
 
-Danach ggf. das letzte fehlende Start-Lektionen-Thema (15. Lektion) und die
-`TOPICS`-Liste erweitern, da sich Themen bei 5/Tag bereits nach 2 Tagen wiederholen
-(siehe „Bekannte Lücken im Feed").
+1. **Automatischer Cron-Trigger:** Nach der ersten Nacht (ab 03:00 UTC) prüfen, ob
+   ohne manuellen Aufruf eine neue Fünfer-Charge im Feed auftaucht, und im
+   Netlify-Dashboard unter Functions, ob `generate-daily-trigger` als „Scheduled" mit
+   plausiblem letzten/nächsten Ausführungszeitpunkt gelistet ist (keine Fehler im Log).
+2. **Niveau-Progression:** Die 15. (letzte A1-)Lektion sowie der Sprung auf A2 sind
+   nur lokal simuliert/verifiziert (`pickForIndex`-Logik durchgerechnet), aber noch
+   nicht durch eine echte Claude-Erzeugung gehört. Nutzer-Feedback zur nächsten
+   Fünfer-Charge (voraussichtlich Themen 15–19, davon 15 noch A1, 16–19 bereits A2)
+   einholen: kommt der Sprung in Tempo/Übersetzungsanteil beim Anhören spürbar rüber,
+   oder muss an den Level-Prompts (`CURRICULUM` in `lesson-generator.src.mjs`)
+   nachjustiert werden?

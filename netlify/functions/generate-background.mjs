@@ -10543,24 +10543,137 @@ var dr = fa.WavHeader = A1;
 // netlify/functions-src/lesson-generator.src.mjs
 var VOICE_NAME = "Kore";
 var TTS_MODEL = "gemini-2.5-flash-preview-tts";
-var SYSTEM = `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion
+var CURRICULUM = [
+  {
+    level: "A1",
+    system: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion
 (ca. 2 Minuten) f\xFCr einen Anf\xE4nger (A1), der sie beim Autofahren anh\xF6rt.
 Ein einfacher, LANGSAMER spanischer Mini-Dialog zu einem Alltagsthema.
 Neue W\xF6rter: zuerst Spanisch, dann kurz die deutsche Bedeutung, dann
 nochmal Spanisch. Wiederhole Schl\xFCssels\xE4tze. Gib NUR den vorzulesenden
-Text aus \u2013 kein Markdown, keine \xDCberschriften.`;
-var TOPICS = [
-  "sich vorstellen und begr\xFC\xDFen",
-  "im Restaurant bestellen",
-  "nach dem Weg fragen",
-  "einkaufen gehen",
-  "die Uhrzeit sagen",
-  "\xFCber das Wetter sprechen",
-  "die Familie vorstellen",
-  "Zahlen und Preise",
-  "ein Taxi rufen",
-  "im Hotel einchecken"
+Text aus \u2013 kein Markdown, keine \xDCberschriften.`,
+    topics: [
+      "sich vorstellen und begr\xFC\xDFen",
+      "im Restaurant bestellen",
+      "nach dem Weg fragen",
+      "einkaufen gehen",
+      "die Uhrzeit sagen",
+      "\xFCber das Wetter sprechen",
+      "die Familie vorstellen",
+      "Zahlen und Preise",
+      "ein Taxi rufen",
+      "im Hotel einchecken",
+      "im Caf\xE9 einen Kaffee bestellen",
+      "sich f\xFCr einen Termin verabreden",
+      "Kleidung im Gesch\xE4ft kaufen",
+      "nach der Speisekarte und Allergien fragen",
+      "sich verabschieden und gute Besserung w\xFCnschen"
+    ]
+  },
+  {
+    level: "A2",
+    system: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion
+(ca. 2\u20133 Minuten) f\xFCr einen fortgeschrittenen Anf\xE4nger (A2), der sie beim
+Autofahren anh\xF6rt. Ein spanischer Dialog zu einem Alltagsthema, im
+normalen, aber noch deutlichen Sprechtempo. Neue oder schwierige W\xF6rter
+kurz auf Deutsch erkl\xE4ren, aber nicht mehr jeden Satz \xFCbersetzen. Etwas
+l\xE4ngere und komplexere S\xE4tze als bei kompletten Anf\xE4ngern. Wiederhole
+wichtige neue Wendungen einmal. Gib NUR den vorzulesenden Text aus \u2013 kein
+Markdown, keine \xDCberschriften.`,
+    topics: [
+      "eine Wohnung besichtigen",
+      "beim Arzt einen Termin machen",
+      "eine Zugfahrkarte kaufen und nach Versp\xE4tungen fragen",
+      "eine Unterkunft im Reiseb\xFCro buchen",
+      "eine Reklamation im Gesch\xE4ft",
+      "Freizeitpl\xE4ne f\xFCrs Wochenende besprechen",
+      "das eigene Zuhause beschreiben",
+      "eine Wegbeschreibung mit mehreren Stationen geben",
+      "sich im Fitnessstudio anmelden",
+      "ein Missverst\xE4ndnis am Telefon kl\xE4ren"
+    ]
+  },
+  {
+    level: "B1",
+    system: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion
+(ca. 3 Minuten) f\xFCr einen Lernenden auf Mittelstufen-Niveau (B1), der sie
+beim Autofahren anh\xF6rt. Ein nat\xFCrlich klingender spanischer Dialog oder
+eine kurze Erz\xE4hlung zu einem etwas anspruchsvolleren Alltagsthema, im
+normalen Sprechtempo. Nur wirklich seltene oder schwierige W\xF6rter kurz auf
+Deutsch erkl\xE4ren \u2013 die meisten S\xE4tze bleiben un\xFCbersetzt. Verwende
+zusammengesetzte S\xE4tze und einfache Vergangenheitsformen. Gib NUR den
+vorzulesenden Text aus \u2013 kein Markdown, keine \xDCberschriften.`,
+    topics: [
+      "die Vor- und Nachteile des Stadtlebens diskutieren",
+      "von den letzten Ferien erz\xE4hlen",
+      "einen Streit zwischen Freunden schlichten",
+      "ein Vorstellungsgespr\xE4ch f\xFChren",
+      "\xFCber gesunde Ern\xE4hrung sprechen",
+      "ein Missverst\xE4ndnis in der WG kl\xE4ren",
+      "eine Meinung zu einem Film austauschen",
+      "Zukunftspl\xE4ne besprechen",
+      "\xFCber Nachhaltigkeit im Alltag sprechen",
+      "eine Beschwerde im Restaurant vortragen"
+    ]
+  },
+  {
+    level: "B2",
+    system: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion
+(ca. 3 Minuten) f\xFCr einen Lernenden auf oberer Mittelstufe (B2), der sie
+beim Autofahren anh\xF6rt. Ein nat\xFCrliches, etwas z\xFCgigeres spanisches
+Gespr\xE4ch oder eine Diskussion zu einem abstrakteren Thema, inklusive
+idiomatischer Wendungen. Praktisch keine deutschen \xDCbersetzungen mehr \u2013
+h\xF6chstens einmal eine wirklich seltene Redewendung kurz einordnen. Nutze
+verschiedene Zeitformen und Nebens\xE4tze. Gib NUR den vorzulesenden Text aus
+\u2013 kein Markdown, keine \xDCberschriften.`,
+    topics: [
+      "eine Diskussion \xFCber Arbeit und Work-Life-Balance",
+      "kulturelle Unterschiede zwischen Deutschland und Spanien",
+      "ein lockeres Streitgespr\xE4ch \xFCber Politik im Freundeskreis",
+      "\xFCber eine schwierige Entscheidung im Leben sprechen",
+      "ein Bewerbungsgespr\xE4ch f\xFCr einen Job im Ausland",
+      "die Vor- und Nachteile von Homeoffice diskutieren",
+      "eine Verhandlung \xFCber einen Mietvertrag",
+      "\xFCber gesellschaftliche Trends und soziale Medien sprechen",
+      "eine Debatte \xFCber Nachhaltigkeit und Konsum",
+      "von Kindheitserinnerungen erz\xE4hlen"
+    ]
+  },
+  {
+    level: "C1",
+    system: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion
+(ca. 3\u20134 Minuten) f\xFCr einen fortgeschrittenen Lernenden (C1), der sie beim
+Autofahren anh\xF6rt. Ein freies, nat\xFCrliches spanisches Gespr\xE4ch oder eine
+Debatte zu einem anspruchsvollen, abstrakten Thema, in normalem bis
+z\xFCgigem Sprechtempo, mit komplexer Grammatik (Konjunktiv, Nebens\xE4tze,
+idiomatische Wendungen). Keine deutschen \xDCbersetzungen. Gib NUR den
+vorzulesenden Text aus \u2013 kein Markdown, keine \xDCberschriften.`,
+    topics: [
+      "eine Debatte \xFCber k\xFCnstliche Intelligenz und Arbeitspl\xE4tze",
+      "eine philosophische Diskussion \xFCber Gl\xFCck",
+      "ein Interview \xFCber eine ungew\xF6hnliche Karriere",
+      "eine kontroverse Diskussion \xFCber den Klimawandel",
+      "eine Analyse eines Buchs oder Films",
+      "ein Streitgespr\xE4ch \xFCber Erziehungsstile",
+      "eine Diskussion \xFCber Migration und Identit\xE4t",
+      "ein Gespr\xE4ch \xFCber die Zukunft der St\xE4dte",
+      "eine Verhandlung in einem anspruchsvollen Gesch\xE4ftskontext",
+      "eine Diskussion \xFCber Ethik in der Technologie"
+    ]
+  }
 ];
+function pickForIndex(index) {
+  let remaining = index;
+  for (let i = 0; i < CURRICULUM.length; i++) {
+    const block = CURRICULUM[i];
+    const isLast = i === CURRICULUM.length - 1;
+    if (remaining < block.topics.length || isLast) {
+      const topic = block.topics[remaining % block.topics.length];
+      return { level: block.level, topic, system: block.system };
+    }
+    remaining -= block.topics.length;
+  }
+}
 function pcmToMp3(pcmBase64, sampleRate) {
   const bytes = Uint8Array.from(Buffer.from(pcmBase64, "base64"));
   let samples = new Int16Array(bytes.buffer, 0, Math.floor(bytes.byteLength / 2));
@@ -10579,7 +10692,7 @@ function pcmToMp3(pcmBase64, sampleRate) {
   if (last.length > 0) chunks.push(Buffer.from(last));
   return Buffer.concat(chunks);
 }
-async function generateEpisodeAudio(topic) {
+async function generateEpisodeAudio(topic, system) {
   const claudeRes = await fetch("https://api.anthropic.com/v1/messages", {
     method: "POST",
     headers: {
@@ -10590,7 +10703,7 @@ async function generateEpisodeAudio(topic) {
     body: JSON.stringify({
       model: "claude-sonnet-4-6",
       max_tokens: 2e3,
-      system: SYSTEM,
+      system,
       messages: [{ role: "user", content: `Thema: ${topic}.` }]
     })
   });
@@ -10630,14 +10743,14 @@ var generate_background_src_default = async () => {
   try {
     const store = getStore("lektionen");
     const { blobs } = await store.list({ prefix: "episodes/" });
-    const topic = TOPICS[blobs.length % TOPICS.length];
-    const mp3 = await generateEpisodeAudio(topic);
+    const { topic, level, system } = pickForIndex(blobs.length);
+    const mp3 = await generateEpisodeAudio(topic, system);
     const ab = mp3.buffer.slice(mp3.byteOffset, mp3.byteOffset + mp3.byteLength);
     const created = (/* @__PURE__ */ new Date()).toISOString();
     const episodeKey = `episodes/${created.replace(/[:.]/g, "-")}.mp3`;
-    await store.set(episodeKey, ab, { metadata: { created, bytes: mp3.length, topic } });
-    await store.set("latest", ab, { metadata: { created, bytes: mp3.length, topic } });
-    console.log("Lektion gespeichert:", mp3.length, "bytes ->", episodeKey, "| Thema:", topic);
+    await store.set(episodeKey, ab, { metadata: { created, bytes: mp3.length, topic, level } });
+    await store.set("latest", ab, { metadata: { created, bytes: mp3.length, topic, level } });
+    console.log("Lektion gespeichert:", mp3.length, "bytes ->", episodeKey, "| Thema:", topic, "| Niveau:", level);
   } catch (e) {
     console.error("ALLGEMEINER FEHLER:", e.message);
   }
