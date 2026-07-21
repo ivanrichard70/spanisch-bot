@@ -192,7 +192,7 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 - Erzeugung (Claude → Gemini → MP3, inkl. End-Stille-Trim), Speichern (Blobs),
   Ausliefern (Funktion). Eine saubere 2-Minuten-Lektion lief online bereits durch.
 - Feed ist live und in Apple Podcasts abonniert (per „Sendung per URL abonnieren",
-  normale Katalog-Suche findet private Feeds nicht). Aktuell **9 von 15** geplanten
+  normale Katalog-Suche findet private Feeds nicht). Aktuell **14 von 15** geplanten
   Start-Lektionen erzeugt (Rest s. „Nächster konkreter Schritt").
 - Der AI-Gateway-Bug ist diagnostiziert; Umstellung auf `MY_…`-Namen ist im Code
   gemacht und gepusht; die `MY_…`-Variablen sind in Netlify angelegt.
@@ -203,7 +203,7 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   `/.netlify/functions/lektion?id=episodes/<Zeitstempel>.mp3`, das `lektion.mjs` jetzt
   zusätzlich zu `latest` unterstützt. Episoden-Titel im Feed zeigen das Thema
   (`Spanisch-Lektion: <Thema>`), Fallback aufs Datum bei alten Episoden ohne Thema-Metadatum.
-- **Themenrotation:** `TOPICS`-Array in `generate-background.mjs` (10 Alltagsthemen, A1).
+- **Themenrotation:** `TOPICS`-Array in `lesson-generator.src.mjs` (10 Alltagsthemen, A1).
   Bei jedem Aufruf wird `TOPICS[bisherige-Episoden-Anzahl % TOPICS.length]` gewählt – kein
   Zufall, sondern deterministisch reihum, rein aus der Anzahl vorhandener `episodes/`-Blobs
   berechnet (kein separater Zähler nötig). Thema wird auch in den Blob-Metadaten gespeichert.
@@ -218,17 +218,19 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   `cover.jpg` lädt (200, image/jpeg), `lektion` liefert bei `Range: bytes=...` korrekt
   `206` + `content-range`-Header.
 
-- **Tägliche automatische Batch-Erzeugung (2026-07-21 gebaut, noch nicht deployed/
-  verifiziert):** `generate-daily-trigger.mjs` (Scheduled Function, täglich 03:00 UTC)
-  stößt `generate-daily-background.mjs` an, das 5 Lektionen parallel erzeugt (Themen
-  vorab aus der aktuellen Episoden-Anzahl berechnet, `latest` danach deterministisch
-  auf die neueste gesetzt). Gemeinsame Erzeugungslogik in `lesson-generator.src.mjs`
+- **Tägliche automatische Batch-Erzeugung (2026-07-21 gebaut, deployed & verifiziert):**
+  `generate-daily-trigger.mjs` (Scheduled Function, täglich 03:00 UTC) stößt
+  `generate-daily-background.mjs` an, das 5 Lektionen parallel erzeugt (Themen vorab
+  aus der aktuellen Episoden-Anzahl berechnet, `latest` danach deterministisch auf die
+  neueste gesetzt). Gemeinsame Erzeugungslogik in `lesson-generator.src.mjs`
   ausgelagert; `generate-background.mjs` (manueller Einzel-Trigger) nutzt dieselbe
-  Logik und verhält sich unverändert. **Nach Deploy prüfen:** Funktions-Liste im
-  Netlify-Dashboard zeigt `generate-daily-trigger` mit „Scheduled"-Badge und
-  nächstem Ausführungszeitpunkt; per „Run now" testweise auslösen und danach im
-  Feed/Blobs kontrollieren, ob 5 neue Episoden mit unterschiedlichen Themen
-  auftauchen (nicht 5× dasselbe Thema).
+  Logik und verhält sich unverändert. Live per manuellem Aufruf von
+  `generate-daily-background` getestet: 5 neue Episoden mit 5 unterschiedlichen,
+  korrekt rotierten Themen (kein Duplikat), `latest` zeigte danach bytegenau auf die
+  chronologisch neueste davon. Einzig noch nicht beobachtet: der automatische
+  Cron-Lauf selbst (erster echter Auslöser ist die kommende Nacht, 03:00 UTC) – falls
+  der ausbleibt, im Netlify-Dashboard unter Functions prüfen, ob
+  `generate-daily-trigger` mit „Scheduled"-Badge gelistet ist.
 
 **Bekannte Lücken im Feed (bewusst zurückgestellt):**
 - `feed.mjs` macht pro Aufruf eine `getMetadata`-Anfrage je Episode (N HEAD-Requests).
@@ -253,17 +255,17 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 
 ## Nächster konkreter Schritt
 
-Die tägliche Batch-Erzeugung (`generate-daily-trigger` + `generate-daily-background`,
-siehe „Aktueller Stand") ist gebaut und lokal syntaktisch geprüft, aber **noch nicht
-deployed**. Nächster Schritt: committen/pushen, Deploy abwarten, dann im
-Netlify-Dashboard unter Functions prüfen, ob `generate-daily-trigger` als „Scheduled"
-mit korrektem nächsten Ausführungszeitpunkt (03:00 UTC) gelistet ist. Per „Run now"
-einmal manuell auslösen und danach `/.netlify/functions/feed` bzw. die Blobs
-kontrollieren: Es sollten 5 neue Episoden mit 5 unterschiedlichen Themen erscheinen,
-und `/.netlify/functions/lektion` (ohne Parameter) sollte die zeitlich neueste davon
-liefern.
+Die tägliche Batch-Erzeugung ist deployed und per manuellem Testlauf verifiziert
+(siehe „Aktueller Stand", 14 von 15 Start-Lektionen fertig). Es fehlt noch die
+Bestätigung, dass der **automatische Cron-Trigger** selbst zuverlässig läuft (nicht
+nur der manuell angestoßene `generate-daily-background`-Aufruf). Nach der ersten
+Nacht (ab 03:00 UTC) prüfen:
+- Ist eine neue Fünfer-Charge im Feed aufgetaucht, ohne dass jemand manuell etwas
+  aufgerufen hat?
+- Im Netlify-Dashboard unter Functions: läuft `generate-daily-trigger` als
+  „Scheduled" mit plausiblem letzten/nächsten Ausführungszeitpunkt, keine Fehler im
+  Log?
 
-Falls dabei die 6 ursprünglich fehlenden Start-Lektionen (Ziel war 15, 9 sind fertig)
-nicht mit abgedeckt werden sollen: weiterhin bei Bedarf manuell
-`https://spanishforivi.netlify.app/.netlify/functions/generate-background` aufrufen
-(Einzel-Trigger, unverändertes Verhalten).
+Danach ggf. das letzte fehlende Start-Lektionen-Thema (15. Lektion) und die
+`TOPICS`-Liste erweitern, da sich Themen bei 5/Tag bereits nach 2 Tagen wiederholen
+(siehe „Bekannte Lücken im Feed").
