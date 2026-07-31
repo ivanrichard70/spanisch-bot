@@ -10543,15 +10543,53 @@ var dr = fa.WavHeader = A1;
 // netlify/functions-src/lesson-generator.src.mjs
 var VOICE_NAME = "Kore";
 var TTS_MODEL = "gemini-2.5-flash-preview-tts";
+var LEVEL_TONE = {
+  A1: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion (ca. 2 Minuten)
+f\xFCr einen Anf\xE4nger (A1), der sie beim Autofahren anh\xF6rt. Sprich LANGSAM und
+deutlich. Neue W\xF6rter: zuerst Spanisch, dann kurz die deutsche Bedeutung,
+dann nochmal Spanisch. Wiederhole wichtige W\xF6rter/S\xE4tze mehrfach.`,
+  A2: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion (ca. 2\u20133 Minuten)
+f\xFCr einen fortgeschrittenen Anf\xE4nger (A2), der sie beim Autofahren anh\xF6rt.
+Normales, aber noch deutliches Sprechtempo. Neue oder schwierige W\xF6rter
+kurz auf Deutsch erkl\xE4ren, aber nicht mehr jedes Wort \xFCbersetzen.
+Wiederhole wichtige neue Wendungen einmal.`,
+  B1: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion (ca. 3 Minuten)
+f\xFCr einen Lernenden auf Mittelstufen-Niveau (B1), der sie beim Autofahren
+anh\xF6rt. Nat\xFCrliches Sprechtempo. Nur wirklich seltene oder schwierige
+W\xF6rter kurz auf Deutsch erkl\xE4ren \u2013 die meisten S\xE4tze bleiben un\xFCbersetzt.`
+};
+var TYPE_FORMAT = {
+  dialog: `Erstelle dazu einen kurzen Dialog zwischen zwei Personen zum
+genannten Thema.`,
+  vokabular: `Erstelle dazu KEINEN Dialog, sondern eine strukturierte
+Wortschatz-Lektion: Stelle 10\u201315 zentrale spanische W\xF6rter/Ausdr\xFCcke zum
+genannten Thema vor. F\xFCr jedes Wort: zuerst das spanische Wort, dann kurz
+die deutsche Bedeutung, dann das spanische Wort noch einmal in einem
+kurzen Beispielsatz.`,
+  verben: `Erstelle dazu KEINEN Dialog, sondern eine Verben-Lektion: Stelle
+10\u201312 besonders wichtige spanische Alltagsverben vor (passend zum
+genannten Thema, z. B. ser, estar, tener, ir, hacer, querer, poder). F\xFCr
+jedes Verb: nenne den Infinitiv mit deutscher Bedeutung, dann 1\u20132 wichtige
+konjugierte Beispiels\xE4tze im Pr\xE4sens.`,
+  beschreibung: `Erstelle dazu KEINEN Dialog, sondern eine Lektion zum
+Beschreiben: Beschreibe Personen, Orte oder Dinge zum genannten Thema in
+mehreren kurzen, klaren S\xE4tzen (z. B. Aussehen, Eigenschaften, Lage). Baue
+dabei wichtiges Beschreibungs-Vokabular (Adjektive) ein und erkl\xE4re neue
+Adjektive kurz auf Deutsch.`,
+  fragen: `Erstelle dazu KEINEN Dialog, sondern eine Lektion zu
+Fragew\xF6rtern: Stelle die wichtigsten spanischen W-Fragew\xF6rter vor (qu\xE9,
+qui\xE9n, d\xF3nde, cu\xE1ndo, por qu\xE9, c\xF3mo, cu\xE1nto) \u2013 jeweils mit deutscher
+Bedeutung \u2013 und bilde zu jedem Fragewort 1\u20132 passende Beispielfragen zum
+genannten Thema, inklusive kurzer beispielhafter Antwort.`
+};
+function buildSystem(level, type) {
+  return `${LEVEL_TONE[level]}
+${TYPE_FORMAT[type]}
+Gib NUR den vorzulesenden Text aus \u2013 kein Markdown, keine \xDCberschriften.`;
+}
 var CURRICULUM = [
   {
     level: "A1",
-    system: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion
-(ca. 2 Minuten) f\xFCr einen Anf\xE4nger (A1), der sie beim Autofahren anh\xF6rt.
-Ein einfacher, LANGSAMER spanischer Mini-Dialog zu einem Alltagsthema.
-Neue W\xF6rter: zuerst Spanisch, dann kurz die deutsche Bedeutung, dann
-nochmal Spanisch. Wiederhole Schl\xFCssels\xE4tze. Gib NUR den vorzulesenden
-Text aus \u2013 kein Markdown, keine \xDCberschriften.`,
     topics: [
       "sich vorstellen und begr\xFC\xDFen",
       "im Restaurant bestellen",
@@ -10567,19 +10605,14 @@ Text aus \u2013 kein Markdown, keine \xDCberschriften.`,
       "sich f\xFCr einen Termin verabreden",
       "Kleidung im Gesch\xE4ft kaufen",
       "nach der Speisekarte und Allergien fragen",
-      "sich verabschieden und gute Besserung w\xFCnschen"
+      "sich verabschieden und gute Besserung w\xFCnschen",
+      { topic: "Grundwortschatz: Zahlen, Farben und Wochentage", type: "vokabular" },
+      { topic: "die wichtigsten Fragew\xF6rter \u2013 W-Fragen stellen", type: "fragen" },
+      "der eigene Tagesablauf"
     ]
   },
   {
     level: "A2",
-    system: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion
-(ca. 2\u20133 Minuten) f\xFCr einen fortgeschrittenen Anf\xE4nger (A2), der sie beim
-Autofahren anh\xF6rt. Ein spanischer Dialog zu einem Alltagsthema, im
-normalen, aber noch deutlichen Sprechtempo. Neue oder schwierige W\xF6rter
-kurz auf Deutsch erkl\xE4ren, aber nicht mehr jeden Satz \xFCbersetzen. Etwas
-l\xE4ngere und komplexere S\xE4tze als bei kompletten Anf\xE4ngern. Wiederhole
-wichtige neue Wendungen einmal. Gib NUR den vorzulesenden Text aus \u2013 kein
-Markdown, keine \xDCberschriften.`,
     topics: [
       "eine Wohnung besichtigen",
       "beim Arzt einen Termin machen",
@@ -10590,19 +10623,16 @@ Markdown, keine \xDCberschriften.`,
       "das eigene Zuhause beschreiben",
       "eine Wegbeschreibung mit mehreren Stationen geben",
       "sich im Fitnessstudio anmelden",
-      "ein Missverst\xE4ndnis am Telefon kl\xE4ren"
+      "ein Missverst\xE4ndnis am Telefon kl\xE4ren",
+      { topic: "die wichtigsten Verben im Alltag (ser, estar, tener, ir, hacer)", type: "verben" },
+      { topic: "Wortschatz: Reisen und Verkehrsmittel", type: "vokabular" },
+      "ein Restaurant f\xFCr eine Feier reservieren",
+      "\xFCber Hobbys und Interessen sprechen",
+      "eine Verabredung kurzfristig verschieben"
     ]
   },
   {
     level: "B1",
-    system: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion
-(ca. 3 Minuten) f\xFCr einen Lernenden auf Mittelstufen-Niveau (B1), der sie
-beim Autofahren anh\xF6rt. Ein nat\xFCrlich klingender spanischer Dialog oder
-eine kurze Erz\xE4hlung zu einem etwas anspruchsvolleren Alltagsthema, im
-normalen Sprechtempo. Nur wirklich seltene oder schwierige W\xF6rter kurz auf
-Deutsch erkl\xE4ren \u2013 die meisten S\xE4tze bleiben un\xFCbersetzt. Verwende
-zusammengesetzte S\xE4tze und einfache Vergangenheitsformen. Gib NUR den
-vorzulesenden Text aus \u2013 kein Markdown, keine \xDCberschriften.`,
     topics: [
       "die Vor- und Nachteile des Stadtlebens diskutieren",
       "von den letzten Ferien erz\xE4hlen",
@@ -10613,63 +10643,25 @@ vorzulesenden Text aus \u2013 kein Markdown, keine \xDCberschriften.`,
       "eine Meinung zu einem Film austauschen",
       "Zukunftspl\xE4ne besprechen",
       "\xFCber Nachhaltigkeit im Alltag sprechen",
-      "eine Beschwerde im Restaurant vortragen"
-    ]
-  },
-  {
-    level: "B2",
-    system: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion
-(ca. 3 Minuten) f\xFCr einen Lernenden auf oberer Mittelstufe (B2), der sie
-beim Autofahren anh\xF6rt. Ein nat\xFCrliches, etwas z\xFCgigeres spanisches
-Gespr\xE4ch oder eine Diskussion zu einem abstrakteren Thema, inklusive
-idiomatischer Wendungen. Praktisch keine deutschen \xDCbersetzungen mehr \u2013
-h\xF6chstens einmal eine wirklich seltene Redewendung kurz einordnen. Nutze
-verschiedene Zeitformen und Nebens\xE4tze. Gib NUR den vorzulesenden Text aus
-\u2013 kein Markdown, keine \xDCberschriften.`,
-    topics: [
-      "eine Diskussion \xFCber Arbeit und Work-Life-Balance",
-      "kulturelle Unterschiede zwischen Deutschland und Spanien",
-      "ein lockeres Streitgespr\xE4ch \xFCber Politik im Freundeskreis",
-      "\xFCber eine schwierige Entscheidung im Leben sprechen",
-      "ein Bewerbungsgespr\xE4ch f\xFCr einen Job im Ausland",
-      "die Vor- und Nachteile von Homeoffice diskutieren",
-      "eine Verhandlung \xFCber einen Mietvertrag",
-      "\xFCber gesellschaftliche Trends und soziale Medien sprechen",
-      "eine Debatte \xFCber Nachhaltigkeit und Konsum",
-      "von Kindheitserinnerungen erz\xE4hlen"
-    ]
-  },
-  {
-    level: "C1",
-    system: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion
-(ca. 3\u20134 Minuten) f\xFCr einen fortgeschrittenen Lernenden (C1), der sie beim
-Autofahren anh\xF6rt. Ein freies, nat\xFCrliches spanisches Gespr\xE4ch oder eine
-Debatte zu einem anspruchsvollen, abstrakten Thema, in normalem bis
-z\xFCgigem Sprechtempo, mit komplexer Grammatik (Konjunktiv, Nebens\xE4tze,
-idiomatische Wendungen). Keine deutschen \xDCbersetzungen. Gib NUR den
-vorzulesenden Text aus \u2013 kein Markdown, keine \xDCberschriften.`,
-    topics: [
-      "eine Debatte \xFCber k\xFCnstliche Intelligenz und Arbeitspl\xE4tze",
-      "eine philosophische Diskussion \xFCber Gl\xFCck",
-      "ein Interview \xFCber eine ungew\xF6hnliche Karriere",
-      "eine kontroverse Diskussion \xFCber den Klimawandel",
-      "eine Analyse eines Buchs oder Films",
-      "ein Streitgespr\xE4ch \xFCber Erziehungsstile",
-      "eine Diskussion \xFCber Migration und Identit\xE4t",
-      "ein Gespr\xE4ch \xFCber die Zukunft der St\xE4dte",
-      "eine Verhandlung in einem anspruchsvollen Gesch\xE4ftskontext",
-      "eine Diskussion \xFCber Ethik in der Technologie"
+      "eine Beschwerde im Restaurant vortragen",
+      { topic: "Menschen und Orte lebendig beschreiben", type: "beschreibung" },
+      { topic: "Wortschatz: Gef\xFChle und Meinungen ausdr\xFCcken", type: "vokabular" },
+      "eine Feier oder ein Fest planen",
+      "\xFCber ein aktuelles Ereignis sprechen",
+      "Ratschl\xE4ge zu einem Problem geben"
     ]
   }
 ];
+var CURRICULUM_RESET_AT = 63;
 function pickForIndex(index) {
-  let remaining = index;
+  let remaining = Math.max(0, index - CURRICULUM_RESET_AT);
   for (let i = 0; i < CURRICULUM.length; i++) {
     const block = CURRICULUM[i];
     const isLast = i === CURRICULUM.length - 1;
     if (remaining < block.topics.length || isLast) {
-      const topic = block.topics[remaining % block.topics.length];
-      return { level: block.level, topic, system: block.system };
+      const entry = block.topics[remaining % block.topics.length];
+      const { topic, type } = typeof entry === "string" ? { topic: entry, type: "dialog" } : entry;
+      return { level: block.level, topic, type, system: buildSystem(block.level, type) };
     }
     remaining -= block.topics.length;
   }
@@ -10740,13 +10732,13 @@ async function generateEpisodeAudio(topic, system) {
 
 // netlify/functions-src/generate-daily-background.src.mjs
 var EPISODES_PER_DAY = 5;
-async function generateAndStore(store, topic, level, system) {
+async function generateAndStore(store, topic, level, type, system) {
   const mp3 = await generateEpisodeAudio(topic, system);
   const ab = mp3.buffer.slice(mp3.byteOffset, mp3.byteOffset + mp3.byteLength);
   const created = (/* @__PURE__ */ new Date()).toISOString();
   const episodeKey = `episodes/${created.replace(/[:.]/g, "-")}.mp3`;
-  await store.set(episodeKey, ab, { metadata: { created, bytes: mp3.length, topic, level } });
-  return { episodeKey, created, ab, bytes: mp3.length, topic, level };
+  await store.set(episodeKey, ab, { metadata: { created, bytes: mp3.length, topic, level, type } });
+  return { episodeKey, created, ab, bytes: mp3.length, topic, level, type };
 }
 var generate_daily_background_src_default = async () => {
   const store = getStore("lektionen");
@@ -10754,13 +10746,13 @@ var generate_daily_background_src_default = async () => {
   const baseCount = blobs.length;
   const picks = Array.from({ length: EPISODES_PER_DAY }, (_, i) => pickForIndex(baseCount + i));
   const results = await Promise.allSettled(
-    picks.map(({ topic, level, system }) => generateAndStore(store, topic, level, system))
+    picks.map(({ topic, level, type, system }) => generateAndStore(store, topic, level, type, system))
   );
   const successes = [];
   results.forEach((r, i) => {
     if (r.status === "fulfilled") {
       successes.push(r.value);
-      console.log("Lektion gespeichert:", picks[i].topic, `(${picks[i].level})`, "->", r.value.episodeKey);
+      console.log("Lektion gespeichert:", picks[i].topic, `(${picks[i].level}, ${picks[i].type})`, "->", r.value.episodeKey);
     } else {
       console.error("FEHLER bei Thema", picks[i].topic, ":", r.reason?.message ?? r.reason);
     }
@@ -10771,7 +10763,7 @@ var generate_daily_background_src_default = async () => {
   }
   const newest = successes.reduce((a, b) => a.created > b.created ? a : b);
   await store.set("latest", newest.ab, {
-    metadata: { created: newest.created, bytes: newest.bytes, topic: newest.topic, level: newest.level }
+    metadata: { created: newest.created, bytes: newest.bytes, topic: newest.topic, level: newest.level, type: newest.type }
   });
   console.log(`Tages-Erzeugung fertig: ${successes.length}/${EPISODES_PER_DAY} Lektionen, "latest" ->`, newest.episodeKey);
 };

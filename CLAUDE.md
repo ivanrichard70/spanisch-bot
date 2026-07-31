@@ -195,8 +195,12 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 - Erzeugung (Claude → Gemini → MP3, inkl. End-Stille-Trim), Speichern (Blobs),
   Ausliefern (Funktion). Eine saubere 2-Minuten-Lektion lief online bereits durch.
 - Feed ist live und in Apple Podcasts abonniert (per „Sendung per URL abonnieren",
-  normale Katalog-Suche findet private Feeds nicht). Aktuell **14 von 15** geplanten
-  Start-Lektionen erzeugt (Rest s. „Nächster konkreter Schritt").
+  normale Katalog-Suche findet private Feeds nicht). Die tägliche Batch-Erzeugung lief
+  seit dem Deploy 10 Nächte durch (2026-07-21 bis 2026-07-31) ohne manuelles Zutun:
+  14 → 63 Episoden, Niveau stieg dabei automatisch bis C1 – **genau das war der Auslöser
+  für den Reset/Cap auf B1**, s. „Themenrotation & Niveau-Progression". Der ursprüngliche
+  „15 Start-Lektionen"-Meilenstein ist damit obsolet (längst überschritten, Curriculum
+  inzwischen neu strukturiert).
 - Der AI-Gateway-Bug ist diagnostiziert; Umstellung auf `MY_…`-Namen ist im Code
   gemacht und gepusht; die `MY_…`-Variablen sind in Netlify angelegt.
 - **Episoden-Historie:** jede Erzeugung speichert zusätzlich zu `latest` eine dauerhafte
@@ -206,22 +210,30 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   `/.netlify/functions/lektion?id=episodes/<Zeitstempel>.mp3`, das `lektion.mjs` jetzt
   zusätzlich zu `latest` unterstützt. Episoden-Titel im Feed zeigen das Thema
   (`Spanisch-Lektion: <Thema>`), Fallback aufs Datum bei alten Episoden ohne Thema-Metadatum.
-- **Themenrotation & Niveau-Progression (2026-07-21 gebaut, deployed & lokal
-  verifiziert – realer Effekt noch nicht live beobachtet):** `CURRICULUM`-Array in
-  `lesson-generator.src.mjs` ersetzt das alte flache `TOPICS`-Array. Themen sind in
-  Blöcken nach Niveau sortiert (A1: 15 Themen, A2/B1/B2/C1: je 10 Themen, jeder Block
-  mit eigenem System-Prompt – Tempo/Übersetzungsanteil/Grammatik-Komplexität steigen
-  von Block zu Block). `pickForIndex(n)` (n = Anzahl bisheriger Episoden) arbeitet
-  sich block für block durch: ein Thema wiederholt sich erst, wenn sein ganzer
-  Niveau-Block durch ist, UND das Niveau steigt automatisch mit der Zeit. Ist der
-  letzte Block (C1) einmal komplett durch, wird nur noch er zyklisch wiederholt (kein
-  Rücksprung auf A1, aber auch kein endloses Steigern über C1 hinaus). Sowohl `topic`
-  als auch `level` werden in den Blob-Metadaten gespeichert und im Feed-Titel
-  angezeigt (`Spanisch-Lektion (B1): <Thema>`). Grund: Nutzer-Feedback nach dem ersten
-  Batch-Testlauf – Themen wiederholten sich zu schnell und blieben immer auf A1-Niveau.
-  Auslöser für den nächsten Niveau-Sprung ist rein die Episoden-**Anzahl**, nicht
-  irgendeine Qualitätsmessung – bei genau 15/25/35/45 erzeugten Episoden springt das
-  Niveau, unabhängig davon ob der Nutzer die vorherigen wirklich gehört hat.
+- **Themenrotation & Niveau-Progression, Cap bei B1 (2026-07-21 erste Version,
+  2026-07-31 überarbeitet – Cap+Reset noch nicht live beobachtet):** `CURRICULUM`-Array
+  in `lesson-generator.src.mjs`. Themen sind in Blöcken nach Niveau sortiert, **gedeckelt
+  bei B1** (A1: 18 Themen, A2: 15, B1: 15 – kein B2/C1 mehr, s. u.), jedes Niveau mit
+  eigenem Ton (`LEVEL_TONE`: Tempo/Übersetzungsanteil steigt von Block zu Block) UND
+  jedes Thema mit einem **Typ** (`TYPE_FORMAT`): `dialog` (Standard) sowie die
+  Sonderformen `vokabular` (strukturierte Wortschatz-Liste, aktuell 3× im Curriculum),
+  `verben` (wichtige Alltagsverben, 1×), `beschreibung` (Personen/Orte beschreiben, 1×)
+  und `fragen` (W-Fragewörter, 1×) – System-Prompt wird aus Niveau-Ton + Typ-Formatierung
+  zusammengesetzt (`buildSystem(level, type)`). `pickForIndex(n)` (n = Anzahl bisheriger
+  Episoden) arbeitet sich block für block durch: ein Thema wiederholt sich erst, wenn
+  sein ganzer Niveau-Block durch ist. Ist der letzte Block (B1) einmal komplett durch,
+  wird nur noch er zyklisch wiederholt (kein Rücksprung auf A1, aber auch kein Steigen
+  über B1 hinaus). `topic`, `level` und `type` werden in den Blob-Metadaten gespeichert
+  und im Feed-Titel angezeigt (`Spanisch-Lektion (B1) – Vokabular: <Thema>`).
+  **`CURRICULUM_RESET_AT = 63`** (Konstante in `lesson-generator.src.mjs`): `pickForIndex`
+  rechnet intern mit `index - CURRICULUM_RESET_AT`, damit die Rotation ab Episode 63
+  wieder bei A1 beginnt, OHNE die vorhandenen 63 Episoden zu löschen (bleiben unverändert
+  in Blobs erhalten, zählen für die Themenwahl aber nicht mehr mit). Grund: Ursprünglich
+  lief die Progression bis C1 (Cap+Themenzahl der ersten Version), aber nach 10 Tagen
+  automatischem Batch-Betrieb (14→63 Episoden) Nutzer-Feedback: zu schwierig/zu schnelle
+  Wiederholung auf C1-Niveau, gewünscht war ein Neustart bei A1 mit Deckel bei B1 und mehr
+  Varianz (Sonder-Typen) im unteren Bereich. Falls das Curriculum je wieder neu gestartet
+  werden soll: `CURRICULUM_RESET_AT` auf die dann aktuelle Episoden-Anzahl setzen.
 
 - **Cover-Art & Range-Requests (2026-07-19 behoben, deployed & verifiziert):** Feedback
   (vermutlich aus einem Podcast-Validator) bemängelte fehlendes `<itunes:image>` (Pflichtfeld
@@ -250,36 +262,40 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 **Bekannte Lücken im Feed (bewusst zurückgestellt):**
 - `feed.mjs` macht pro Aufruf eine `getMetadata`-Anfrage je Episode (N HEAD-Requests).
   Bei manueller/seltener Erzeugung unkritisch; bei vielen Episoden ggf. später cachen.
-- Nach dem C1-Block (Episode 45+) wiederholen sich dessen 10 Themen alle 2 Tage (bei
-  5/Tag) endlos – das Niveau steigt dann nicht mehr weiter. Bei Bedarf `CURRICULUM` in
-  `lesson-generator.src.mjs` um weitere C1-Themen (oder einen weiteren Block) ergänzen.
+- Nach dem B1-Block (48 Themen ab `CURRICULUM_RESET_AT` durch) wiederholen sich dessen
+  15 B1-Themen alle 3 Tage (bei 5/Tag) endlos – das ist ab jetzt so gewollt (Cap bei B1),
+  aber falls die Wiederholung auf Dauer zu eintönig wird: `CURRICULUM` in
+  `lesson-generator.src.mjs` um weitere B1-Themen ergänzen (Block einfach länger machen,
+  keine Struktur-Änderung nötig).
 
 **Spätere Ausbaustufen:**
 - Lernermodell: Wortschatz & Schwächen mitführen, Lektionen daran anpassen
   (z. B. gezielt Fragewörter üben).
 - Optionaler Gesprächs-Modus (Sprechen + Antworten) für Situationen mit freien Händen.
-- **Grammatik-Lektionen als eigener `type` (z. B. `"dialog"` vs. `"grammatik"`):** die
-  Niveau-Progression (A1→C1) ist jetzt umgesetzt (s. „Themenrotation & Niveau-
-  Progression"), aber alle Blöcke sind noch reine Alltags-/Gesprächs-Dialoge. Eine
-  eigene `type`-Dimension fürs gezielte Grammatik-Üben (mit wieder eigenen
-  System-Prompt-Varianten) ist weiterhin offen, gemischt in denselben Feed
-  (bewusste Entscheidung des Nutzers – nicht als separater Feed pro Level/Typ).
+- **Weitere Lektionstypen über `vokabular`/`verben`/`beschreibung`/`fragen` hinaus**
+  (z. B. gezieltes Grammatik-Üben wie Vergangenheitsformen oder Subjuntivo als eigener
+  `type`): die `type`-Dimension existiert jetzt (s. „Themenrotation & Niveau-
+  Progression"), aktuell mit vier Sonderformen. Bei Bedarf `TYPE_FORMAT` in
+  `lesson-generator.src.mjs` um weitere Typen ergänzen und im `CURRICULUM` an
+  passenden Stellen einstreuen – gemischt in denselben Feed (bewusste Entscheidung des
+  Nutzers – nicht als separater Feed pro Level/Typ).
 
 ---
 
 ## Nächster konkreter Schritt
 
-Zwei Dinge sind gebaut/deployed, aber noch nicht durch einen echten unbeaufsichtigten
-Lauf bestätigt:
+Der automatische Cron-Trigger ist bereits bestätigt zuverlässig gelaufen (10 Nächte
+in Folge, s. „Aktueller Stand"). Offen ist jetzt der **Curriculum-Reset selbst**
+(2026-07-31 gebaut, deployed, lokal mit `pickForIndex`-Testaufrufen verifiziert, aber
+noch nicht durch eine echte Claude-Erzeugung gehört):
 
-1. **Automatischer Cron-Trigger:** Nach der ersten Nacht (ab 03:00 UTC) prüfen, ob
-   ohne manuellen Aufruf eine neue Fünfer-Charge im Feed auftaucht, und im
-   Netlify-Dashboard unter Functions, ob `generate-daily-trigger` als „Scheduled" mit
-   plausiblem letzten/nächsten Ausführungszeitpunkt gelistet ist (keine Fehler im Log).
-2. **Niveau-Progression:** Die 15. (letzte A1-)Lektion sowie der Sprung auf A2 sind
-   nur lokal simuliert/verifiziert (`pickForIndex`-Logik durchgerechnet), aber noch
-   nicht durch eine echte Claude-Erzeugung gehört. Nutzer-Feedback zur nächsten
-   Fünfer-Charge (voraussichtlich Themen 15–19, davon 15 noch A1, 16–19 bereits A2)
-   einholen: kommt der Sprung in Tempo/Übersetzungsanteil beim Anhören spürbar rüber,
-   oder muss an den Level-Prompts (`CURRICULUM` in `lesson-generator.src.mjs`)
-   nachjustiert werden?
+- Nächste Fünfer-Charge (heute Nacht, 03:00 UTC) sollte 5 neue A1-Themen aus dem
+  erweiterten Curriculum liefern, inkl. ggf. eines der neuen Sonder-Typen
+  (Vokabular/Verben/Beschreibung/Fragen), je nachdem welche Indizes ab
+  `CURRICULUM_RESET_AT = 63` genau dran sind.
+- Nutzer-Feedback einholen: Kommt der Neustart bei A1 richtig an (spürbar leichter
+  nach dem C1-Ausflug)? Funktionieren die neuen Lektionstypen inhaltlich wie gedacht
+  (Vokabular-Liste statt Dialog, Verben-Drill, Beschreibung, W-Fragen)? Bei Bedarf
+  `TYPE_FORMAT`/`LEVEL_TONE` in `lesson-generator.src.mjs` nachjustieren.
+- Titel im Feed sollten jetzt Typ-Label zeigen, z. B. „Spanisch-Lektion (A1) –
+  Vokabular: Grundwortschatz…" – nach dem nächsten Batch-Lauf im Feed gegenprüfen.
