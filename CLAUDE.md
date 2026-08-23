@@ -210,13 +210,41 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   `/.netlify/functions/lektion?id=episodes/<Zeitstempel>.mp3`, das `lektion.mjs` jetzt
   zusätzlich zu `latest` unterstützt. Episoden-Titel im Feed zeigen das Thema
   (`Spanisch-Lektion: <Thema>`), Fallback aufs Datum bei alten Episoden ohne Thema-Metadatum.
+- **Neuausrichtung auf die Paraguay-Reise (2026-08-23, lokal gebaut & gebündelt,
+  noch NICHT committed/deployed):** `CURRICULUM` in `lesson-generator.src.mjs`
+  komplett neu geschrieben – statt generischer Alltagsthemen jetzt konkret auf eine
+  bevorstehende Paraguay-Reise zugeschnitten (Ankunft Flughafen Asunción, Airbnb-
+  Check-in, Mietwagen, Behördengänge, Markt/Verhandeln, Rückfragen beim Gastgeber
+  usw.), weiterhin je 15 Themen pro Niveau (A1/A2/B1, gedeckelt bei B1). Neu:
+  - **`REGION_HINT`** (in JEDEM System-Prompt, unabhängig vom Typ): erzwingt
+    paraguayisches Spanisch statt Standard-/Spanien-Spanisch – voseo („vos tenés",
+    „vení", „mirá", „dale" statt „tú tienes" etc.), Preise in Guaraníes statt Euro.
+  - **`GUARANI_HINT`** (in jeder Lektion außer Typ `guarani` selbst): baut 2–3
+    Guaraní-Wörter/Floskeln passend zum Thema ein (mit deutscher Übersetzung,
+    langsam/silbenweise vorgelesen) – Guaraní ist zweite Amtssprache Paraguays.
+  - zwei neue `type`-Werte in `TYPE_FORMAT`: **`guarani`** (reine Guaraní-
+    Wortschatz-Lektion, 8–12 Wörter/Floskeln) und **`zusammenfassung`**
+    (Wiederholungs-Lektion mit kurzer Selbstabfrage samt hörbarer Denkpause).
+    Beide auch in `feed.src.mjs` → `TYPE_LABELS` ergänzt („Guaraní" / „Wiederholung").
+  - **`CURRICULUM_RESET_AT`** von `63` auf `169` hochgesetzt (Rotation beginnt ab
+    Episode 169 wieder bei A1, ältere Episoden bleiben in Blobs erhalten und zählen
+    nicht mehr für die Themenwahl).
+  Stand: Quelldateien geändert und mit esbuild neu in `netlify/functions/feed.mjs`,
+  `generate-background.mjs`, `generate-daily-background.mjs` gebündelt (verifiziert:
+  Bundles enthalten `CURRICULUM_RESET_AT = 169`, `REGION_HINT`, `guarani`-Strings).
+  **Noch offen: Commit, Push, Deploy und ein echter Erzeugungs-Test** – bisher nur
+  lokal gebündelt, nichts davon ist auf Netlify live. Siehe „Nächster konkreter
+  Schritt".
 - **Themenrotation & Niveau-Progression, Cap bei B1 (2026-07-21 erste Version,
-  2026-07-31 überarbeitet – Cap+Reset noch nicht live beobachtet):** `CURRICULUM`-Array
-  in `lesson-generator.src.mjs`. Themen sind in Blöcken nach Niveau sortiert, **gedeckelt
-  bei B1** (A1: 18 Themen, A2: 15, B1: 15 – kein B2/C1 mehr, s. u.), jedes Niveau mit
-  eigenem Ton (`LEVEL_TONE`: Tempo/Übersetzungsanteil steigt von Block zu Block) UND
-  jedes Thema mit einem **Typ** (`TYPE_FORMAT`): `dialog` (Standard) sowie die
-  Sonderformen `vokabular` (strukturierte Wortschatz-Liste, aktuell 3× im Curriculum),
+  2026-07-31 überarbeitet – Cap+Reset noch nicht live beobachtet; die konkreten
+  Themen/Zahlen hier sind mit der Paraguay-Neuausrichtung 2026-08-23 überholt, s. o. –
+  Mechanik (Blöcke, Typ-Dimension, Reset-Konstante) gilt aber unverändert):**
+  `CURRICULUM`-Array in `lesson-generator.src.mjs`. Themen sind in Blöcken nach Niveau
+  sortiert, **gedeckelt bei B1** (aktuell A1: 15, A2: 15, B1: 15 Themen – kein B2/C1
+  mehr, s. u.), jedes Niveau mit eigenem Ton (`LEVEL_TONE`: Tempo/Übersetzungsanteil
+  steigt von Block zu Block) UND jedes Thema mit einem **Typ** (`TYPE_FORMAT`):
+  `dialog` (Standard) sowie die Sonderformen `vokabular` (strukturierte
+  Wortschatz-Liste, aktuell 3× im Curriculum),
   `verben` (wichtige Alltagsverben, 1×), `beschreibung` (Personen/Orte beschreiben, 1×)
   und `fragen` (W-Fragewörter, 1×) – System-Prompt wird aus Niveau-Ton + Typ-Formatierung
   zusammengesetzt (`buildSystem(level, type)`). `pickForIndex(n)` (n = Anzahl bisheriger
@@ -262,11 +290,11 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 **Bekannte Lücken im Feed (bewusst zurückgestellt):**
 - `feed.mjs` macht pro Aufruf eine `getMetadata`-Anfrage je Episode (N HEAD-Requests).
   Bei manueller/seltener Erzeugung unkritisch; bei vielen Episoden ggf. später cachen.
-- Nach dem B1-Block (48 Themen ab `CURRICULUM_RESET_AT` durch) wiederholen sich dessen
-  15 B1-Themen alle 3 Tage (bei 5/Tag) endlos – das ist ab jetzt so gewollt (Cap bei B1),
-  aber falls die Wiederholung auf Dauer zu eintönig wird: `CURRICULUM` in
-  `lesson-generator.src.mjs` um weitere B1-Themen ergänzen (Block einfach länger machen,
-  keine Struktur-Änderung nötig).
+- Nach dem B1-Block (45 Themen ab `CURRICULUM_RESET_AT` durch, s. Paraguay-
+  Neuausrichtung oben) wiederholen sich dessen 15 B1-Themen alle 3 Tage (bei 5/Tag)
+  endlos – das ist ab jetzt so gewollt (Cap bei B1), aber falls die Wiederholung auf
+  Dauer zu eintönig wird: `CURRICULUM` in `lesson-generator.src.mjs` um weitere
+  B1-Themen ergänzen (Block einfach länger machen, keine Struktur-Änderung nötig).
 
 **Spätere Ausbaustufen:**
 - Lernermodell: Wortschatz & Schwächen mitführen, Lektionen daran anpassen
@@ -284,18 +312,29 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 
 ## Nächster konkreter Schritt
 
-Der automatische Cron-Trigger ist bereits bestätigt zuverlässig gelaufen (10 Nächte
-in Folge, s. „Aktueller Stand"). Offen ist jetzt der **Curriculum-Reset selbst**
-(2026-07-31 gebaut, deployed, lokal mit `pickForIndex`-Testaufrufen verifiziert, aber
-noch nicht durch eine echte Claude-Erzeugung gehört):
+Der automatische Cron-Trigger läuft zuverlässig (s. „Aktueller Stand"). Der B1-Cap-
+Reset vom 2026-07-31 ist im Feed-Betrieb angekommen. Offen ist jetzt die **Paraguay-
+Neuausrichtung vom 2026-08-23**: Quelldateien geändert und lokal neu gebündelt
+(`feed.mjs`, `generate-background.mjs`, `generate-daily-background.mjs`), aber
+**noch nicht committed, nicht gepusht, nicht deployed** – bisher nur eine bewusste
+Nutzer-Entscheidung, erstmal nur lokal zu committen (kein Push, kein Deploy).
 
-- Nächste Fünfer-Charge (heute Nacht, 03:00 UTC) sollte 5 neue A1-Themen aus dem
-  erweiterten Curriculum liefern, inkl. ggf. eines der neuen Sonder-Typen
-  (Vokabular/Verben/Beschreibung/Fragen), je nachdem welche Indizes ab
-  `CURRICULUM_RESET_AT = 63` genau dran sind.
-- Nutzer-Feedback einholen: Kommt der Neustart bei A1 richtig an (spürbar leichter
-  nach dem C1-Ausflug)? Funktionieren die neuen Lektionstypen inhaltlich wie gedacht
-  (Vokabular-Liste statt Dialog, Verben-Drill, Beschreibung, W-Fragen)? Bei Bedarf
-  `TYPE_FORMAT`/`LEVEL_TONE` in `lesson-generator.src.mjs` nachjustieren.
-- Titel im Feed sollten jetzt Typ-Label zeigen, z. B. „Spanisch-Lektion (A1) –
-  Vokabular: Grundwortschatz…" – nach dem nächsten Batch-Lauf im Feed gegenprüfen.
+- Commit lokal ausstehend bzw. gerade gemacht (Repo-Status per `git status` prüfen).
+- Vor dem Push: idealerweise lokal mit `netlify dev` testen, ob `generate-background`
+  mit dem neuen Curriculum sauber durchläuft (Region-Hint/Guaraní-Hint im Prompt,
+  neue Typen `guarani`/`zusammenfassung`) – kostet Gemini-/Claude-Kontingent, daher
+  vorher beim Nutzer nachfragen (s. Memory: „Confirm before API cost").
+- Danach Push nach GitHub (löst vermutlich automatischen Netlify-Deploy aus) und erst
+  dann live per echter Erzeugung verifizieren:
+  - Liefert die nächste Lektion tatsächlich paraguayisches Spanisch (voseo,
+    Guaraníes) statt Standard-Spanisch?
+  - Klingen die eingestreuten Guaraní-Wörter (`GUARANI_HINT`) und die reinen
+    Guaraní-Lektionen (`type: "guarani"`) inhaltlich plausibel, keine erfundenen
+    Wörter?
+  - Funktioniert die neue `zusammenfassung`-Lektion (Wiederholung + Selbstabfrage
+    mit hörbarer Pause) wie gedacht?
+  - Zeigt der Feed die neuen Typ-Labels korrekt („Spanisch-Lektion (A1) – Guaraní:
+    …" bzw. „… – Wiederholung: …")?
+- Nutzer-Feedback einholen, ob das Curriculum inhaltlich zur tatsächlichen Reise
+  passt (Reihenfolge/Themen), bei Bedarf `CURRICULUM` in `lesson-generator.src.mjs`
+  nachjustieren.

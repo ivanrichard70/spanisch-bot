@@ -20,6 +20,24 @@ anhört. Natürliches Sprechtempo. Nur wirklich seltene oder schwierige
 Wörter kurz auf Deutsch erklären – die meisten Sätze bleiben unübersetzt.`
 };
 
+// Regionale Ausrichtung: Der Nutzer reist nach Paraguay – das Spanisch soll
+// klingen wie dort gesprochen, nicht wie in Spanien. Gilt für JEDE Lektion.
+const REGION_HINT = `WICHTIG – Region: Der Lernende reist nach Paraguay.
+Verwende paraguayisches Spanisch: „vos" statt „tú" (vos tenés, vos querés,
+vení, mirá, dale), Anrede und Höflichkeitsformen wie in Asunción üblich.
+Preise immer in Guaraníes (der Landeswährung), nicht in Euro.`;
+
+// Guaraní ist zweite Amtssprache in Paraguay. Wird in JEDE Lektion eingestreut
+// (außer bei type "guarani" – dort ist Guaraní schon das ganze Thema).
+const GUARANI_HINT = `Guaraní: Paraguay ist zweisprachig. Baue in diese Lektion
+2–3 einfache Guaraní-Wörter oder -Floskeln ein, die zum Thema passen (z. B.
+maitei = Grüße/hallo, mba'éichapa = wie geht's?, aguyje = danke, heẽ = ja,
+nahániri = nein). Nenne jeweils das Guaraní-Wort LANGSAM und Silbe für Silbe,
+dann die deutsche Bedeutung, dann das Guaraní-Wort noch einmal. Erfinde nichts:
+wenn Paraguayer für einen Begriff im Alltag das spanische Wort benutzen, sag das
+ehrlich statt ein Guaraní-Wort zu konstruieren. Wiederhole die Guaraní-Wörter am
+Ende der Lektion einmal kurz.`;
+
 // Aufbau/Form der Lektion je nach Typ (unabhängig vom Niveau).
 const TYPE_FORMAT = {
   dialog: `Erstelle dazu einen kurzen Dialog zwischen zwei Personen zum
@@ -43,11 +61,29 @@ Adjektive kurz auf Deutsch.`,
 Fragewörtern: Stelle die wichtigsten spanischen W-Fragewörter vor (qué,
 quién, dónde, cuándo, por qué, cómo, cuánto) – jeweils mit deutscher
 Bedeutung – und bilde zu jedem Fragewort 1–2 passende Beispielfragen zum
-genannten Thema, inklusive kurzer beispielhafter Antwort.`
+genannten Thema, inklusive kurzer beispielhafter Antwort.`,
+  guarani: `Erstelle dazu KEINEN Dialog, sondern eine GUARANÍ-Lektion: Stelle
+8–12 einfache Guaraní-Wörter oder Floskeln zum genannten Thema vor – nur
+solche, die man in Paraguay im Alltag wirklich hört. Für jedes Wort: zuerst
+das Guaraní-Wort LANGSAM und Silbe für Silbe, dann die deutsche Bedeutung,
+dann das spanische Äquivalent, dann das Guaraní-Wort noch einmal in einem
+kurzen Beispielsatz. Erfinde keine Wörter – wo Paraguayer im Alltag das
+spanische Wort benutzen, sag das ausdrücklich. Wiederhole am Ende alle Wörter
+noch einmal als kurze Liste.`,
+  zusammenfassung: `Erstelle dazu KEINEN neuen Dialog, sondern eine
+WIEDERHOLUNGS-Lektion: Fasse das Wichtigste zu den genannten Situationen
+zusammen. Gehe die Situationen der Reihe nach durch und nenne je Situation
+die 3–5 Sätze, die man dort wirklich braucht – jeweils Spanisch, kurze
+deutsche Bedeutung, Spanisch. Baue am Ende eine kleine Selbst-Abfrage ein:
+nenne die deutsche Bedeutung, dann eine hörbare Denkpause (schreibe dafür
+„… uno … dos … tres …"), dann die spanische Lösung.`
 };
 
 function buildSystem(level, type) {
-  return `${LEVEL_TONE[level]}\n${TYPE_FORMAT[type]}\nGib NUR den vorzulesenden Text aus – kein Markdown, keine Überschriften.`;
+  const parts = [LEVEL_TONE[level], TYPE_FORMAT[type], REGION_HINT];
+  if (type !== "guarani") parts.push(GUARANI_HINT);
+  parts.push("Gib NUR den vorzulesenden Text aus – kein Markdown, keine Überschriften.");
+  return parts.join("\n");
 }
 
 // Curriculum: Themen sind in Blöcken nach Niveau sortiert, gedeckelt bei B1
@@ -63,74 +99,73 @@ export const CURRICULUM = [
   {
     level: "A1",
     topics: [
-      "sich vorstellen und begrüßen",
-      "im Restaurant bestellen",
-      "nach dem Weg fragen",
-      "einkaufen gehen",
-      "die Uhrzeit sagen",
-      "über das Wetter sprechen",
-      "die Familie vorstellen",
-      "Zahlen und Preise",
-      "ein Taxi rufen",
-      "im Hotel einchecken",
-      "im Café einen Kaffee bestellen",
-      "sich für einen Termin verabreden",
-      "Kleidung im Geschäft kaufen",
-      "nach der Speisekarte und Allergien fragen",
-      "sich verabschieden und gute Besserung wünschen",
-      { topic: "Grundwortschatz: Zahlen, Farben und Wochentage", type: "vokabular" },
-      { topic: "die wichtigsten Fragewörter – W-Fragen stellen", type: "fragen" },
-      "der eigene Tagesablauf"
+      { topic: "die ersten Guaraní-Wörter: hallo, danke, ja, nein, entschuldigung", type: "guarani" },
+      "am Flughafen Asunción ankommen: Einreise und Passkontrolle",
+      { topic: "Wortschatz: Flughafen, Gepäck und Dokumente", type: "vokabular" },
+      "die Gepäckausgabe finden und durch den Zoll gehen",
+      "vom Flughafen ein Taxi oder einen Fahrdienst nehmen",
+      { topic: "die wichtigsten Fragewörter – nach Weg, Preis und Uhrzeit fragen", type: "fragen" },
+      "beim Airbnb ankommen und den Gastgeber begrüßen",
+      "beim Check-in nach Schlüssel, WLAN und Klimaanlage fragen",
+      { topic: "Wortschatz: Wohnung, Schlüssel, WLAN und Haushalt", type: "vokabular" },
+      "einen Mietwagen am Flughafen abholen und die Reservierung bestätigen",
+      { topic: "Wortschatz: Mietwagen, Tanken und Versicherung", type: "vokabular" },
+      "Zahlen und Preise in Guaraníes verstehen",
+      { topic: "höflich grüßen und sich bedanken – auf Spanisch und Guaraní", type: "guarani" },
+      "im Supermarkt in Asunción einkaufen",
+      { topic: "Wiederholung A1: Ankunft am Flughafen, Airbnb-Check-in und Mietwagen", type: "zusammenfassung" }
     ]
   },
   {
     level: "A2",
     topics: [
-      "eine Wohnung besichtigen",
-      "beim Arzt einen Termin machen",
-      "eine Zugfahrkarte kaufen und nach Verspätungen fragen",
-      "eine Unterkunft im Reisebüro buchen",
-      "eine Reklamation im Geschäft",
-      "Freizeitpläne fürs Wochenende besprechen",
-      "das eigene Zuhause beschreiben",
-      "eine Wegbeschreibung mit mehreren Stationen geben",
-      "sich im Fitnessstudio anmelden",
-      "ein Missverständnis am Telefon klären",
-      { topic: "die wichtigsten Verben im Alltag (ser, estar, tener, ir, hacer)", type: "verben" },
-      { topic: "Wortschatz: Reisen und Verkehrsmittel", type: "vokabular" },
-      "ein Restaurant für eine Feier reservieren",
-      "über Hobbys und Interessen sprechen",
-      "eine Verabredung kurzfristig verschieben"
+      "am Flughafen verlorenes Gepäck melden",
+      "beim Airbnb etwas melden, das nicht funktioniert (Warmwasser, Klimaanlage)",
+      "die Mietwagen-Übergabe: Schäden und Tankregelung besprechen",
+      { topic: "die wichtigsten Reise-Verben (llegar, recoger, alquilar, pagar, esperar)", type: "verben" },
+      "an der Tankstelle tanken und nach dem Parken fragen",
+      { topic: "Wortschatz: Auto, Straße und Wegbeschreibung in Paraguay", type: "vokabular" },
+      "bei einer Verkehrskontrolle ruhig und höflich reagieren",
+      "Smalltalk mit dem Gastgeber: woher kommst du, wie lange bleibst du",
+      { topic: "Guaraní im Alltag: Wörter, die Paraguayer mitten im Spanischen benutzen", type: "guarani" },
+      "im Restaurant typisch paraguayisch bestellen (Chipa, Sopa paraguaya, Tereré)",
+      { topic: "die Unterkunft und die Umgebung beschreiben", type: "beschreibung" },
+      "einen Ausflug planen und nach dem Weg fragen",
+      "Geld wechseln und mit Karte bezahlen",
+      "den Aufenthalt im Airbnb um ein paar Tage verlängern",
+      { topic: "Wiederholung A2: Probleme melden, Auto fahren und Guaraní-Basics", type: "zusammenfassung" }
     ]
   },
   {
     level: "B1",
     topics: [
-      "die Vor- und Nachteile des Stadtlebens diskutieren",
-      "von den letzten Ferien erzählen",
-      "einen Streit zwischen Freunden schlichten",
-      "ein Vorstellungsgespräch führen",
-      "über gesunde Ernährung sprechen",
-      "ein Missverständnis in der WG klären",
-      "eine Meinung zu einem Film austauschen",
-      "Zukunftspläne besprechen",
-      "über Nachhaltigkeit im Alltag sprechen",
-      "eine Beschwerde im Restaurant vortragen",
-      { topic: "Menschen und Orte lebendig beschreiben", type: "beschreibung" },
-      { topic: "Wortschatz: Gefühle und Meinungen ausdrücken", type: "vokabular" },
-      "eine Feier oder ein Fest planen",
-      "über ein aktuelles Ereignis sprechen",
-      "Ratschläge zu einem Problem geben"
+      "ein Missverständnis mit dem Autovermieter klären (Extrakosten auf der Rechnung)",
+      "eine Beschwerde beim Airbnb-Gastgeber höflich aber deutlich vortragen",
+      "eine Panne oder einen kleinen Unfall melden",
+      "mit Nachbarn über die Gegend und den Alltag in Paraguay sprechen",
+      { topic: "Wortschatz: Geld, Bank und Bezahlen in Paraguay", type: "vokabular" },
+      "bei einer Behörde eine Auskunft einholen",
+      "in der Apotheke oder beim Arzt ein Problem schildern",
+      { topic: "Jopara: wie Paraguayer Spanisch und Guaraní im Alltag mischen", type: "guarani" },
+      "auf dem Markt oder mit einem Handwerker über den Preis verhandeln",
+      "ein Haus oder eine Wohnung längerfristig mieten",
+      "über Klima, Menschen und das Leben in Paraguay sprechen",
+      { topic: "Menschen, Orte und Situationen lebendig beschreiben", type: "beschreibung" },
+      "die eigenen Reisepläne für die nächsten Wochen erklären",
+      "eine Einladung annehmen oder höflich ablehnen",
+      { topic: "Wiederholung B1: Ankunft, Wohnen, Auto und Kommunikation in Paraguay", type: "zusammenfassung" }
     ]
   }
 ];
 
-// Episoden-Anzahl, ab der das Curriculum am 2026-07-31 neu bei A1 gestartet
-// wurde (Nutzerwunsch: Cap bei B1 statt bis C1 hochzulaufen, mehr Themen im
-// Bereich A1–B1). Ältere Episoden (Index < CURRICULUM_RESET_AT) bleiben in
-// den Blobs unverändert erhalten, zählen für die Themenwahl aber nicht mehr
-// mit – die Rotation rechnet ab hier wieder bei 0.
-const CURRICULUM_RESET_AT = 63;
+// Episoden-Anzahl, ab der das Curriculum neu bei A1 startet. Ältere Episoden
+// (Index < CURRICULUM_RESET_AT) bleiben in den Blobs unverändert erhalten,
+// zählen für die Themenwahl aber nicht mehr mit – die Rotation rechnet ab hier
+// wieder bei 0.
+// Historie: 63 = Reset am 2026-07-31 (Cap bei B1 statt C1).
+//          169 = Reset am 2026-08-23 (Neuausrichtung auf die Paraguay-Reise:
+//                Flughafen/Airbnb/Mietwagen + Guaraní, s. CURRICULUM oben).
+const CURRICULUM_RESET_AT = 169;
 
 // Wählt Thema, Niveau, Typ und System-Prompt für die n-te Lektion (0-basiert;
 // n = Anzahl bisher erzeugter Episoden). Arbeitet sich block für block durchs

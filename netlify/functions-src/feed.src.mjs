@@ -24,7 +24,9 @@ const TYPE_LABELS = {
   vokabular: "Vokabular",
   verben: "Verben",
   beschreibung: "Beschreibung",
-  fragen: "Fragen"
+  fragen: "Fragen",
+  guarani: "Guaraní",
+  zusammenfassung: "Wiederholung"
 };
 
 function titleForEpisode(topic, level, type, created) {

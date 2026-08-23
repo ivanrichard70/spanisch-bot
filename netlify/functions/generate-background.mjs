@@ -1,4 +1,4 @@
-// node_modules/@netlify/runtime-utils/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/runtime-utils/dist/main.js
 var getString = (input) => typeof input === "string" ? input : JSON.stringify(input);
 var base64Decode = globalThis.Buffer ? (input) => Buffer.from(input, "base64").toString() : (input) => atob(input);
 var base64Encode = globalThis.Buffer ? (input) => Buffer.from(getString(input)).toString("base64") : (input) => btoa(getString(input));
@@ -17,7 +17,7 @@ var getEnvironment = () => {
   };
 };
 
-// node_modules/@netlify/otel/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/otel/dist/main.js
 var GET_TRACER = "__netlify__getTracer";
 var getTracer = (name, version) => {
   return globalThis[GET_TRACER]?.(name, version);
@@ -33,7 +33,7 @@ function withActiveSpan(tracer, name, optionsOrFn, contextOrFn, fn) {
   return tracer.withActiveSpan(name, optionsOrFn, contextOrFn, func);
 }
 
-// node_modules/@netlify/blobs/dist/chunk-YAGWSQMB.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/blobs/dist/chunk-FWVYH726.js
 var getEnvironmentContext = () => {
   const context = globalThis.netlifyBlobsContext || getEnvironment().get("NETLIFY_BLOBS_CONTEXT");
   if (typeof context !== "string" || !context) {
@@ -95,13 +95,23 @@ var getMetadataFromResponse = (response) => {
 };
 var NF_ERROR = "x-nf-error";
 var NF_REQUEST_ID = "x-nf-request-id";
+var DEPLOY_STORE_PREFIX = "deploy:";
+var SITE_STORE_PREFIX = "site:";
+var isDeniedWrite = (res, { method, storeName }) => (res.status === 401 || res.status === 403) && (method === "put" || method === "delete") && storeName !== void 0 && !storeName.startsWith(DEPLOY_STORE_PREFIX);
+var blobsErrorMessage = (res, context) => {
+  let details = res.headers.get(NF_ERROR) || `${res.status} status code`;
+  if (res.headers.has(NF_REQUEST_ID)) {
+    details += `, ID: ${res.headers.get(NF_REQUEST_ID)}`;
+  }
+  if (isDeniedWrite(res, context)) {
+    const storeName = context.storeName?.startsWith(SITE_STORE_PREFIX) ? context.storeName.slice(SITE_STORE_PREFIX.length) : context.storeName;
+    return `Netlify Blobs could not write to store '${storeName}' (${details}). Builds and build plugins can only write to deploy-specific stores: use 'getDeployStore' instead of 'getStore', or pass a 'token' with write access to the store. If this code is not running in a build, check that the token and site ID are valid. See https://docs.netlify.com/build/data-and-storage/netlify-blobs/#deploy-specific-stores`;
+  }
+  return `Netlify Blobs has generated an internal error (${details})`;
+};
 var BlobsInternalError = class extends Error {
-  constructor(res) {
-    let details = res.headers.get(NF_ERROR) || `${res.status} status code`;
-    if (res.headers.has(NF_REQUEST_ID)) {
-      details += `, ID: ${res.headers.get(NF_REQUEST_ID)}`;
-    }
-    super(`Netlify Blobs has generated an internal error (${details})`);
+  constructor(res, context = {}) {
+    super(blobsErrorMessage(res, context));
     this.name = "BlobsInternalError";
   }
 };
@@ -257,7 +267,7 @@ var Client = class {
       method
     });
     if (res.status !== 200) {
-      throw new BlobsInternalError(res);
+      throw new BlobsInternalError(res, { method, storeName });
     }
     const { url: signedURL } = await res.json();
     const userHeaders = encodedMetadata ? { [METADATA_HEADER_INTERNAL]: encodedMetadata } : void 0;
@@ -331,10 +341,8 @@ var getClientOptions = (options, contextOverride) => {
   return clientOptions;
 };
 
-// node_modules/@netlify/blobs/dist/main.js
-var DEPLOY_STORE_PREFIX = "deploy:";
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/blobs/dist/main.js
 var LEGACY_STORE_INTERNAL_PREFIX = "netlify-internal/legacy-namespace/";
-var SITE_STORE_PREFIX = "site:";
 var STATUS_OK = 200;
 var STATUS_PRE_CONDITION_FAILED = 412;
 var Store = class _Store {
@@ -359,7 +367,7 @@ var Store = class _Store {
   async delete(key) {
     const res = await this.client.makeRequest({ key, method: "delete", storeName: this.name });
     if (![200, 204, 404].includes(res.status)) {
-      throw new BlobsInternalError(res);
+      throw new BlobsInternalError(res, { method: "delete", storeName: this.name });
     }
   }
   async deleteAll() {
@@ -368,7 +376,7 @@ var Store = class _Store {
     while (hasMore) {
       const res = await this.client.makeRequest({ method: "delete", storeName: this.name });
       if (res.status !== 200) {
-        throw new BlobsInternalError(res);
+        throw new BlobsInternalError(res, { method: "delete", storeName: this.name });
       }
       const data = await res.json();
       if (typeof data.blobs_deleted !== "number") {
@@ -570,7 +578,7 @@ var Store = class _Store {
           modified: true
         };
       }
-      throw new BlobsInternalError(res);
+      throw new BlobsInternalError(res, { method: "put", storeName: this.name });
     });
   }
   async setJSON(key, data, options = {}) {
@@ -579,7 +587,8 @@ var Store = class _Store {
         "blobs.store": this.name,
         "blobs.key": key,
         "blobs.method": "PUT",
-        "blobs.data.type": "json"
+        "blobs.data.type": "json",
+        "blobs.atomic": Boolean(options.onlyIfMatch ?? options.onlyIfNew)
       });
       _Store.validateKey(key);
       const conditions = _Store.getConditions(options);
@@ -588,7 +597,7 @@ var Store = class _Store {
         "content-type": "application/json"
       };
       const res = await this.client.makeRequest({
-        ...conditions,
+        conditions,
         body: payload,
         headers,
         key,
@@ -610,7 +619,7 @@ var Store = class _Store {
           modified: true
         };
       }
-      throw new BlobsInternalError(res);
+      throw new BlobsInternalError(res, { method: "put", storeName: this.name });
     });
   }
   static formatListResultBlob(result) {
@@ -775,7 +784,7 @@ var getStore = (input, options) => {
   );
 };
 
-// node_modules/@breezystack/lamejs/dist/lamejs.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@breezystack/lamejs/dist/lamejs.js
 var fa = {};
 function Xa(w) {
   return new Int8Array(w);
@@ -10558,6 +10567,18 @@ f\xFCr einen Lernenden auf Mittelstufen-Niveau (B1), der sie beim Autofahren
 anh\xF6rt. Nat\xFCrliches Sprechtempo. Nur wirklich seltene oder schwierige
 W\xF6rter kurz auf Deutsch erkl\xE4ren \u2013 die meisten S\xE4tze bleiben un\xFCbersetzt.`
 };
+var REGION_HINT = `WICHTIG \u2013 Region: Der Lernende reist nach Paraguay.
+Verwende paraguayisches Spanisch: \u201Evos" statt \u201Et\xFA" (vos ten\xE9s, vos quer\xE9s,
+ven\xED, mir\xE1, dale), Anrede und H\xF6flichkeitsformen wie in Asunci\xF3n \xFCblich.
+Preise immer in Guaran\xEDes (der Landesw\xE4hrung), nicht in Euro.`;
+var GUARANI_HINT = `Guaran\xED: Paraguay ist zweisprachig. Baue in diese Lektion
+2\u20133 einfache Guaran\xED-W\xF6rter oder -Floskeln ein, die zum Thema passen (z. B.
+maitei = Gr\xFC\xDFe/hallo, mba'\xE9ichapa = wie geht's?, aguyje = danke, he\u1EBD = ja,
+nah\xE1niri = nein). Nenne jeweils das Guaran\xED-Wort LANGSAM und Silbe f\xFCr Silbe,
+dann die deutsche Bedeutung, dann das Guaran\xED-Wort noch einmal. Erfinde nichts:
+wenn Paraguayer f\xFCr einen Begriff im Alltag das spanische Wort benutzen, sag das
+ehrlich statt ein Guaran\xED-Wort zu konstruieren. Wiederhole die Guaran\xED-W\xF6rter am
+Ende der Lektion einmal kurz.`;
 var TYPE_FORMAT = {
   dialog: `Erstelle dazu einen kurzen Dialog zwischen zwei Personen zum
 genannten Thema.`,
@@ -10580,79 +10601,92 @@ Adjektive kurz auf Deutsch.`,
 Fragew\xF6rtern: Stelle die wichtigsten spanischen W-Fragew\xF6rter vor (qu\xE9,
 qui\xE9n, d\xF3nde, cu\xE1ndo, por qu\xE9, c\xF3mo, cu\xE1nto) \u2013 jeweils mit deutscher
 Bedeutung \u2013 und bilde zu jedem Fragewort 1\u20132 passende Beispielfragen zum
-genannten Thema, inklusive kurzer beispielhafter Antwort.`
+genannten Thema, inklusive kurzer beispielhafter Antwort.`,
+  guarani: `Erstelle dazu KEINEN Dialog, sondern eine GUARAN\xCD-Lektion: Stelle
+8\u201312 einfache Guaran\xED-W\xF6rter oder Floskeln zum genannten Thema vor \u2013 nur
+solche, die man in Paraguay im Alltag wirklich h\xF6rt. F\xFCr jedes Wort: zuerst
+das Guaran\xED-Wort LANGSAM und Silbe f\xFCr Silbe, dann die deutsche Bedeutung,
+dann das spanische \xC4quivalent, dann das Guaran\xED-Wort noch einmal in einem
+kurzen Beispielsatz. Erfinde keine W\xF6rter \u2013 wo Paraguayer im Alltag das
+spanische Wort benutzen, sag das ausdr\xFCcklich. Wiederhole am Ende alle W\xF6rter
+noch einmal als kurze Liste.`,
+  zusammenfassung: `Erstelle dazu KEINEN neuen Dialog, sondern eine
+WIEDERHOLUNGS-Lektion: Fasse das Wichtigste zu den genannten Situationen
+zusammen. Gehe die Situationen der Reihe nach durch und nenne je Situation
+die 3\u20135 S\xE4tze, die man dort wirklich braucht \u2013 jeweils Spanisch, kurze
+deutsche Bedeutung, Spanisch. Baue am Ende eine kleine Selbst-Abfrage ein:
+nenne die deutsche Bedeutung, dann eine h\xF6rbare Denkpause (schreibe daf\xFCr
+\u201E\u2026 uno \u2026 dos \u2026 tres \u2026"), dann die spanische L\xF6sung.`
 };
 function buildSystem(level, type) {
-  return `${LEVEL_TONE[level]}
-${TYPE_FORMAT[type]}
-Gib NUR den vorzulesenden Text aus \u2013 kein Markdown, keine \xDCberschriften.`;
+  const parts = [LEVEL_TONE[level], TYPE_FORMAT[type], REGION_HINT];
+  if (type !== "guarani") parts.push(GUARANI_HINT);
+  parts.push("Gib NUR den vorzulesenden Text aus \u2013 kein Markdown, keine \xDCberschriften.");
+  return parts.join("\n");
 }
 var CURRICULUM = [
   {
     level: "A1",
     topics: [
-      "sich vorstellen und begr\xFC\xDFen",
-      "im Restaurant bestellen",
-      "nach dem Weg fragen",
-      "einkaufen gehen",
-      "die Uhrzeit sagen",
-      "\xFCber das Wetter sprechen",
-      "die Familie vorstellen",
-      "Zahlen und Preise",
-      "ein Taxi rufen",
-      "im Hotel einchecken",
-      "im Caf\xE9 einen Kaffee bestellen",
-      "sich f\xFCr einen Termin verabreden",
-      "Kleidung im Gesch\xE4ft kaufen",
-      "nach der Speisekarte und Allergien fragen",
-      "sich verabschieden und gute Besserung w\xFCnschen",
-      { topic: "Grundwortschatz: Zahlen, Farben und Wochentage", type: "vokabular" },
-      { topic: "die wichtigsten Fragew\xF6rter \u2013 W-Fragen stellen", type: "fragen" },
-      "der eigene Tagesablauf"
+      { topic: "die ersten Guaran\xED-W\xF6rter: hallo, danke, ja, nein, entschuldigung", type: "guarani" },
+      "am Flughafen Asunci\xF3n ankommen: Einreise und Passkontrolle",
+      { topic: "Wortschatz: Flughafen, Gep\xE4ck und Dokumente", type: "vokabular" },
+      "die Gep\xE4ckausgabe finden und durch den Zoll gehen",
+      "vom Flughafen ein Taxi oder einen Fahrdienst nehmen",
+      { topic: "die wichtigsten Fragew\xF6rter \u2013 nach Weg, Preis und Uhrzeit fragen", type: "fragen" },
+      "beim Airbnb ankommen und den Gastgeber begr\xFC\xDFen",
+      "beim Check-in nach Schl\xFCssel, WLAN und Klimaanlage fragen",
+      { topic: "Wortschatz: Wohnung, Schl\xFCssel, WLAN und Haushalt", type: "vokabular" },
+      "einen Mietwagen am Flughafen abholen und die Reservierung best\xE4tigen",
+      { topic: "Wortschatz: Mietwagen, Tanken und Versicherung", type: "vokabular" },
+      "Zahlen und Preise in Guaran\xEDes verstehen",
+      { topic: "h\xF6flich gr\xFC\xDFen und sich bedanken \u2013 auf Spanisch und Guaran\xED", type: "guarani" },
+      "im Supermarkt in Asunci\xF3n einkaufen",
+      { topic: "Wiederholung A1: Ankunft am Flughafen, Airbnb-Check-in und Mietwagen", type: "zusammenfassung" }
     ]
   },
   {
     level: "A2",
     topics: [
-      "eine Wohnung besichtigen",
-      "beim Arzt einen Termin machen",
-      "eine Zugfahrkarte kaufen und nach Versp\xE4tungen fragen",
-      "eine Unterkunft im Reiseb\xFCro buchen",
-      "eine Reklamation im Gesch\xE4ft",
-      "Freizeitpl\xE4ne f\xFCrs Wochenende besprechen",
-      "das eigene Zuhause beschreiben",
-      "eine Wegbeschreibung mit mehreren Stationen geben",
-      "sich im Fitnessstudio anmelden",
-      "ein Missverst\xE4ndnis am Telefon kl\xE4ren",
-      { topic: "die wichtigsten Verben im Alltag (ser, estar, tener, ir, hacer)", type: "verben" },
-      { topic: "Wortschatz: Reisen und Verkehrsmittel", type: "vokabular" },
-      "ein Restaurant f\xFCr eine Feier reservieren",
-      "\xFCber Hobbys und Interessen sprechen",
-      "eine Verabredung kurzfristig verschieben"
+      "am Flughafen verlorenes Gep\xE4ck melden",
+      "beim Airbnb etwas melden, das nicht funktioniert (Warmwasser, Klimaanlage)",
+      "die Mietwagen-\xDCbergabe: Sch\xE4den und Tankregelung besprechen",
+      { topic: "die wichtigsten Reise-Verben (llegar, recoger, alquilar, pagar, esperar)", type: "verben" },
+      "an der Tankstelle tanken und nach dem Parken fragen",
+      { topic: "Wortschatz: Auto, Stra\xDFe und Wegbeschreibung in Paraguay", type: "vokabular" },
+      "bei einer Verkehrskontrolle ruhig und h\xF6flich reagieren",
+      "Smalltalk mit dem Gastgeber: woher kommst du, wie lange bleibst du",
+      { topic: "Guaran\xED im Alltag: W\xF6rter, die Paraguayer mitten im Spanischen benutzen", type: "guarani" },
+      "im Restaurant typisch paraguayisch bestellen (Chipa, Sopa paraguaya, Terer\xE9)",
+      { topic: "die Unterkunft und die Umgebung beschreiben", type: "beschreibung" },
+      "einen Ausflug planen und nach dem Weg fragen",
+      "Geld wechseln und mit Karte bezahlen",
+      "den Aufenthalt im Airbnb um ein paar Tage verl\xE4ngern",
+      { topic: "Wiederholung A2: Probleme melden, Auto fahren und Guaran\xED-Basics", type: "zusammenfassung" }
     ]
   },
   {
     level: "B1",
     topics: [
-      "die Vor- und Nachteile des Stadtlebens diskutieren",
-      "von den letzten Ferien erz\xE4hlen",
-      "einen Streit zwischen Freunden schlichten",
-      "ein Vorstellungsgespr\xE4ch f\xFChren",
-      "\xFCber gesunde Ern\xE4hrung sprechen",
-      "ein Missverst\xE4ndnis in der WG kl\xE4ren",
-      "eine Meinung zu einem Film austauschen",
-      "Zukunftspl\xE4ne besprechen",
-      "\xFCber Nachhaltigkeit im Alltag sprechen",
-      "eine Beschwerde im Restaurant vortragen",
-      { topic: "Menschen und Orte lebendig beschreiben", type: "beschreibung" },
-      { topic: "Wortschatz: Gef\xFChle und Meinungen ausdr\xFCcken", type: "vokabular" },
-      "eine Feier oder ein Fest planen",
-      "\xFCber ein aktuelles Ereignis sprechen",
-      "Ratschl\xE4ge zu einem Problem geben"
+      "ein Missverst\xE4ndnis mit dem Autovermieter kl\xE4ren (Extrakosten auf der Rechnung)",
+      "eine Beschwerde beim Airbnb-Gastgeber h\xF6flich aber deutlich vortragen",
+      "eine Panne oder einen kleinen Unfall melden",
+      "mit Nachbarn \xFCber die Gegend und den Alltag in Paraguay sprechen",
+      { topic: "Wortschatz: Geld, Bank und Bezahlen in Paraguay", type: "vokabular" },
+      "bei einer Beh\xF6rde eine Auskunft einholen",
+      "in der Apotheke oder beim Arzt ein Problem schildern",
+      { topic: "Jopara: wie Paraguayer Spanisch und Guaran\xED im Alltag mischen", type: "guarani" },
+      "auf dem Markt oder mit einem Handwerker \xFCber den Preis verhandeln",
+      "ein Haus oder eine Wohnung l\xE4ngerfristig mieten",
+      "\xFCber Klima, Menschen und das Leben in Paraguay sprechen",
+      { topic: "Menschen, Orte und Situationen lebendig beschreiben", type: "beschreibung" },
+      "die eigenen Reisepl\xE4ne f\xFCr die n\xE4chsten Wochen erkl\xE4ren",
+      "eine Einladung annehmen oder h\xF6flich ablehnen",
+      { topic: "Wiederholung B1: Ankunft, Wohnen, Auto und Kommunikation in Paraguay", type: "zusammenfassung" }
     ]
   }
 ];
-var CURRICULUM_RESET_AT = 63;
+var CURRICULUM_RESET_AT = 169;
 function pickForIndex(index) {
   let remaining = Math.max(0, index - CURRICULUM_RESET_AT);
   for (let i = 0; i < CURRICULUM.length; i++) {

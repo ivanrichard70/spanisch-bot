@@ -1,4 +1,4 @@
-// node_modules/@netlify/runtime-utils/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/runtime-utils/dist/main.js
 var getString = (input) => typeof input === "string" ? input : JSON.stringify(input);
 var base64Decode = globalThis.Buffer ? (input) => Buffer.from(input, "base64").toString() : (input) => atob(input);
 var base64Encode = globalThis.Buffer ? (input) => Buffer.from(getString(input)).toString("base64") : (input) => btoa(getString(input));
@@ -17,7 +17,7 @@ var getEnvironment = () => {
   };
 };
 
-// node_modules/@netlify/otel/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/otel/dist/main.js
 var GET_TRACER = "__netlify__getTracer";
 var getTracer = (name, version) => {
   return globalThis[GET_TRACER]?.(name, version);
@@ -33,7 +33,7 @@ function withActiveSpan(tracer, name, optionsOrFn, contextOrFn, fn) {
   return tracer.withActiveSpan(name, optionsOrFn, contextOrFn, func);
 }
 
-// node_modules/@netlify/blobs/dist/chunk-YAGWSQMB.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/blobs/dist/chunk-FWVYH726.js
 var getEnvironmentContext = () => {
   const context = globalThis.netlifyBlobsContext || getEnvironment().get("NETLIFY_BLOBS_CONTEXT");
   if (typeof context !== "string" || !context) {
@@ -95,13 +95,23 @@ var getMetadataFromResponse = (response) => {
 };
 var NF_ERROR = "x-nf-error";
 var NF_REQUEST_ID = "x-nf-request-id";
+var DEPLOY_STORE_PREFIX = "deploy:";
+var SITE_STORE_PREFIX = "site:";
+var isDeniedWrite = (res, { method, storeName }) => (res.status === 401 || res.status === 403) && (method === "put" || method === "delete") && storeName !== void 0 && !storeName.startsWith(DEPLOY_STORE_PREFIX);
+var blobsErrorMessage = (res, context) => {
+  let details = res.headers.get(NF_ERROR) || `${res.status} status code`;
+  if (res.headers.has(NF_REQUEST_ID)) {
+    details += `, ID: ${res.headers.get(NF_REQUEST_ID)}`;
+  }
+  if (isDeniedWrite(res, context)) {
+    const storeName = context.storeName?.startsWith(SITE_STORE_PREFIX) ? context.storeName.slice(SITE_STORE_PREFIX.length) : context.storeName;
+    return `Netlify Blobs could not write to store '${storeName}' (${details}). Builds and build plugins can only write to deploy-specific stores: use 'getDeployStore' instead of 'getStore', or pass a 'token' with write access to the store. If this code is not running in a build, check that the token and site ID are valid. See https://docs.netlify.com/build/data-and-storage/netlify-blobs/#deploy-specific-stores`;
+  }
+  return `Netlify Blobs has generated an internal error (${details})`;
+};
 var BlobsInternalError = class extends Error {
-  constructor(res) {
-    let details = res.headers.get(NF_ERROR) || `${res.status} status code`;
-    if (res.headers.has(NF_REQUEST_ID)) {
-      details += `, ID: ${res.headers.get(NF_REQUEST_ID)}`;
-    }
-    super(`Netlify Blobs has generated an internal error (${details})`);
+  constructor(res, context = {}) {
+    super(blobsErrorMessage(res, context));
     this.name = "BlobsInternalError";
   }
 };
@@ -257,7 +267,7 @@ var Client = class {
       method
     });
     if (res.status !== 200) {
-      throw new BlobsInternalError(res);
+      throw new BlobsInternalError(res, { method, storeName });
     }
     const { url: signedURL } = await res.json();
     const userHeaders = encodedMetadata ? { [METADATA_HEADER_INTERNAL]: encodedMetadata } : void 0;
@@ -331,10 +341,8 @@ var getClientOptions = (options, contextOverride) => {
   return clientOptions;
 };
 
-// node_modules/@netlify/blobs/dist/main.js
-var DEPLOY_STORE_PREFIX = "deploy:";
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/blobs/dist/main.js
 var LEGACY_STORE_INTERNAL_PREFIX = "netlify-internal/legacy-namespace/";
-var SITE_STORE_PREFIX = "site:";
 var STATUS_OK = 200;
 var STATUS_PRE_CONDITION_FAILED = 412;
 var Store = class _Store {
@@ -359,7 +367,7 @@ var Store = class _Store {
   async delete(key) {
     const res = await this.client.makeRequest({ key, method: "delete", storeName: this.name });
     if (![200, 204, 404].includes(res.status)) {
-      throw new BlobsInternalError(res);
+      throw new BlobsInternalError(res, { method: "delete", storeName: this.name });
     }
   }
   async deleteAll() {
@@ -368,7 +376,7 @@ var Store = class _Store {
     while (hasMore) {
       const res = await this.client.makeRequest({ method: "delete", storeName: this.name });
       if (res.status !== 200) {
-        throw new BlobsInternalError(res);
+        throw new BlobsInternalError(res, { method: "delete", storeName: this.name });
       }
       const data = await res.json();
       if (typeof data.blobs_deleted !== "number") {
@@ -570,7 +578,7 @@ var Store = class _Store {
           modified: true
         };
       }
-      throw new BlobsInternalError(res);
+      throw new BlobsInternalError(res, { method: "put", storeName: this.name });
     });
   }
   async setJSON(key, data, options = {}) {
@@ -579,7 +587,8 @@ var Store = class _Store {
         "blobs.store": this.name,
         "blobs.key": key,
         "blobs.method": "PUT",
-        "blobs.data.type": "json"
+        "blobs.data.type": "json",
+        "blobs.atomic": Boolean(options.onlyIfMatch ?? options.onlyIfNew)
       });
       _Store.validateKey(key);
       const conditions = _Store.getConditions(options);
@@ -588,7 +597,7 @@ var Store = class _Store {
         "content-type": "application/json"
       };
       const res = await this.client.makeRequest({
-        ...conditions,
+        conditions,
         body: payload,
         headers,
         key,
@@ -610,7 +619,7 @@ var Store = class _Store {
           modified: true
         };
       }
-      throw new BlobsInternalError(res);
+      throw new BlobsInternalError(res, { method: "put", storeName: this.name });
     });
   }
   static formatListResultBlob(result) {
@@ -797,7 +806,9 @@ var TYPE_LABELS = {
   vokabular: "Vokabular",
   verben: "Verben",
   beschreibung: "Beschreibung",
-  fragen: "Fragen"
+  fragen: "Fragen",
+  guarani: "Guaran\xED",
+  zusammenfassung: "Wiederholung"
 };
 function titleForEpisode(topic, level, type, created) {
   if (topic) {
