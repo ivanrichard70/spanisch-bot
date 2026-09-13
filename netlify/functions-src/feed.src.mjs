@@ -25,7 +25,6 @@ const TYPE_LABELS = {
   verben: "Verben",
   beschreibung: "Beschreibung",
   fragen: "Fragen",
-  guarani: "Guaraní",
   zusammenfassung: "Wiederholung"
 };
 

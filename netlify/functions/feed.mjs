@@ -1,4 +1,4 @@
-// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/runtime-utils/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/0c2edf7f-f3fe-4dcd-95c6-54a5ad90d6e8/scratchpad/build/node_modules/@netlify/runtime-utils/dist/main.js
 var getString = (input) => typeof input === "string" ? input : JSON.stringify(input);
 var base64Decode = globalThis.Buffer ? (input) => Buffer.from(input, "base64").toString() : (input) => atob(input);
 var base64Encode = globalThis.Buffer ? (input) => Buffer.from(getString(input)).toString("base64") : (input) => btoa(getString(input));
@@ -17,7 +17,7 @@ var getEnvironment = () => {
   };
 };
 
-// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/otel/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/0c2edf7f-f3fe-4dcd-95c6-54a5ad90d6e8/scratchpad/build/node_modules/@netlify/otel/dist/main.js
 var GET_TRACER = "__netlify__getTracer";
 var getTracer = (name, version) => {
   return globalThis[GET_TRACER]?.(name, version);
@@ -33,7 +33,7 @@ function withActiveSpan(tracer, name, optionsOrFn, contextOrFn, fn) {
   return tracer.withActiveSpan(name, optionsOrFn, contextOrFn, func);
 }
 
-// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/blobs/dist/chunk-FWVYH726.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/0c2edf7f-f3fe-4dcd-95c6-54a5ad90d6e8/scratchpad/build/node_modules/@netlify/blobs/dist/chunk-6TDSNTDP.js
 var getEnvironmentContext = () => {
   const context = globalThis.netlifyBlobsContext || getEnvironment().get("NETLIFY_BLOBS_CONTEXT");
   if (typeof context !== "string" || !context) {
@@ -98,7 +98,7 @@ var NF_REQUEST_ID = "x-nf-request-id";
 var DEPLOY_STORE_PREFIX = "deploy:";
 var SITE_STORE_PREFIX = "site:";
 var isDeniedWrite = (res, { method, storeName }) => (res.status === 401 || res.status === 403) && (method === "put" || method === "delete") && storeName !== void 0 && !storeName.startsWith(DEPLOY_STORE_PREFIX);
-var blobsErrorMessage = (res, context) => {
+var blobsErrorMessage = (res, context, responseBody) => {
   let details = res.headers.get(NF_ERROR) || `${res.status} status code`;
   if (res.headers.has(NF_REQUEST_ID)) {
     details += `, ID: ${res.headers.get(NF_REQUEST_ID)}`;
@@ -107,13 +107,23 @@ var blobsErrorMessage = (res, context) => {
     const storeName = context.storeName?.startsWith(SITE_STORE_PREFIX) ? context.storeName.slice(SITE_STORE_PREFIX.length) : context.storeName;
     return `Netlify Blobs could not write to store '${storeName}' (${details}). Builds and build plugins can only write to deploy-specific stores: use 'getDeployStore' instead of 'getStore', or pass a 'token' with write access to the store. If this code is not running in a build, check that the token and site ID are valid. See https://docs.netlify.com/build/data-and-storage/netlify-blobs/#deploy-specific-stores`;
   }
-  return `Netlify Blobs has generated an internal error (${details})`;
+  let message = `Netlify Blobs has generated an internal error (${details})`;
+  if (!res.headers.get(NF_ERROR) && responseBody) {
+    message += `: ${responseBody}`;
+  }
+  return message;
 };
 var BlobsInternalError = class extends Error {
-  constructor(res, context = {}) {
-    super(blobsErrorMessage(res, context));
+  constructor(res, context = {}, responseBody) {
+    super(blobsErrorMessage(res, context, responseBody));
     this.name = "BlobsInternalError";
+    this.status = res.status;
+    this.responseBody = responseBody;
   }
+};
+var createBlobsInternalError = async (res, context = {}) => {
+  const responseBody = await res.clone().text().catch(() => void 0);
+  return new BlobsInternalError(res, context, responseBody);
 };
 var collectIterator = async (iterator) => {
   const result = [];
@@ -156,13 +166,15 @@ var DEFAULT_RETRY_DELAY = getEnvironment().get("NODE_ENV") === "test" ? 1 : 5e3;
 var MIN_RETRY_DELAY = 1e3;
 var MAX_RETRY = 5;
 var RATE_LIMIT_HEADER = "X-RateLimit-Reset";
-var fetchAndRetry = async (fetch, url, options, attemptsLeft = MAX_RETRY) => {
+var fetchAndRetry = async (fetch, url, options, attemptsLeft = MAX_RETRY, getRetryUrl) => {
   try {
     const res = await fetch(url, options);
-    if (attemptsLeft > 0 && (res.status === 429 || res.status >= 500)) {
+    const isRetryable = res.status === 429 || res.status >= 500 || getRetryUrl !== void 0 && res.status === 403;
+    if (attemptsLeft > 0 && isRetryable) {
       const delay = getDelay(res.headers.get(RATE_LIMIT_HEADER));
       await sleep(delay);
-      return fetchAndRetry(fetch, url, options, attemptsLeft - 1);
+      const retryUrl = getRetryUrl ? await getRetryUrl() : url;
+      return fetchAndRetry(fetch, retryUrl, options, attemptsLeft - 1, getRetryUrl);
     }
     return res;
   } catch (error) {
@@ -171,7 +183,8 @@ var fetchAndRetry = async (fetch, url, options, attemptsLeft = MAX_RETRY) => {
     }
     const delay = getDelay();
     await sleep(delay);
-    return fetchAndRetry(fetch, url, options, attemptsLeft - 1);
+    const retryUrl = getRetryUrl ? await getRetryUrl() : url;
+    return fetchAndRetry(fetch, retryUrl, options, attemptsLeft - 1, getRetryUrl);
   }
 };
 var getDelay = (rateLimitReset) => {
@@ -267,7 +280,7 @@ var Client = class {
       method
     });
     if (res.status !== 200) {
-      throw new BlobsInternalError(res, { method, storeName });
+      throw await createBlobsInternalError(res, { method, storeName });
     }
     const { url: signedURL } = await res.json();
     const userHeaders = encodedMetadata ? { [METADATA_HEADER_INTERNAL]: encodedMetadata } : void 0;
@@ -315,7 +328,15 @@ var Client = class {
     if (body instanceof ReadableStream) {
       options.duplex = "half";
     }
-    return fetchAndRetry(this.fetch, url, options);
+    const usesSignedUrl = !this.edgeURL && key !== void 0 && storeName !== void 0 && method !== "head" && method !== "delete";
+    let getRetryUrl;
+    if (usesSignedUrl) {
+      getRetryUrl = async () => {
+        const finalRequest = await this.getFinalRequest({ consistency, key, metadata, method, parameters, storeName });
+        return finalRequest.url;
+      };
+    }
+    return fetchAndRetry(this.fetch, url, options, void 0, getRetryUrl);
   }
 };
 var getClientOptions = (options, contextOverride) => {
@@ -341,7 +362,7 @@ var getClientOptions = (options, contextOverride) => {
   return clientOptions;
 };
 
-// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/blobs/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/0c2edf7f-f3fe-4dcd-95c6-54a5ad90d6e8/scratchpad/build/node_modules/@netlify/blobs/dist/main.js
 var LEGACY_STORE_INTERNAL_PREFIX = "netlify-internal/legacy-namespace/";
 var STATUS_OK = 200;
 var STATUS_PRE_CONDITION_FAILED = 412;
@@ -578,7 +599,7 @@ var Store = class _Store {
           modified: true
         };
       }
-      throw new BlobsInternalError(res, { method: "put", storeName: this.name });
+      throw await createBlobsInternalError(res, { method: "put", storeName: this.name });
     });
   }
   async setJSON(key, data, options = {}) {
@@ -807,7 +828,6 @@ var TYPE_LABELS = {
   verben: "Verben",
   beschreibung: "Beschreibung",
   fragen: "Fragen",
-  guarani: "Guaran\xED",
   zusammenfassung: "Wiederholung"
 };
 function titleForEpisode(topic, level, type, created) {

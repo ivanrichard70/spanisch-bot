@@ -33,26 +33,14 @@ Wörter kurz auf Deutsch erklären – die meisten Sätze bleiben unübersetzt.`
 
 // Regionale Ausrichtung: Der Nutzer reist nach Paraguay – das Spanisch soll
 // klingen wie dort gesprochen, nicht wie in Spanien. Gilt für JEDE Lektion.
+// Bewusst NUR Spanisch (kein Guaraní, s. Nutzerentscheidung 2026-09-13 –
+// vorheriger GUARANI_HINT/type "guarani" wieder entfernt, s. Git-Historie).
 const REGION_HINT = `WICHTIG – Region: Der Lernende reist nach Paraguay.
 Verwende paraguayisches Spanisch: „vos" statt „tú" (vos tenés, vos querés,
 vení, mirá, dale), Anrede und Höflichkeitsformen wie in Asunción üblich.
-Preise immer in Guaraníes (der Landeswährung), nicht in Euro.`;
-
-// Guaraní ist zweite Amtssprache in Paraguay. Wird in JEDE Lektion eingestreut
-// (außer bei type "guarani" – dort ist Guaraní schon das ganze Thema).
-const GUARANI_HINT = `Guaraní: Paraguay ist zweisprachig. Das ist PFLICHT, nicht
-optional: Baue in JEDE Lektion mindestens 2 einfache Guaraní-Wörter oder
--Floskeln ein – lass sie NIE ganz weg. Bevorzugt solche, die zum Thema passen;
-findest du für diesen genauen Begriff keine passenden (weil Paraguayer im
-Alltag dafür nur das spanische Wort benutzen), nimm STATTDESSEN 1–2 gängige
-Alltags-Guaraní-Wörter, die zu JEDEM Thema passen (z. B. maitei = Grüße/hallo,
-mba'éichapa = wie geht's?, aguyje = danke, heẽ = ja, nahániri = nein, iporã =
-gut/schön), und baue sie z. B. als kurze Begrüßung oder Bemerkung am Anfang
-oder Ende der Lektion ein. Nenne jeweils das Guaraní-Wort LANGSAM und Silbe
-für Silbe, dann die deutsche Bedeutung, dann das Guaraní-Wort noch einmal.
-Erfinde keine Wörter, die es nicht gibt – aber verzichte deswegen nicht auf
-Guaraní insgesamt, weiche stattdessen auf die gängigen Alltagswörter oben aus.
-Wiederhole die Guaraní-Wörter am Ende der Lektion einmal kurz.`;
+Preise immer in Guaraníes (der Landeswährung), nicht in Euro. Bleib dabei
+ausschließlich beim Spanischen – KEINE Guaraní-Wörter oder -Floskeln
+einbauen, auch nicht vereinzelt.`;
 
 // Aufbau/Form der Lektion je nach Typ (unabhängig vom Niveau).
 const TYPE_FORMAT = {
@@ -80,14 +68,6 @@ Fragewörtern: Stelle die im genannten Thema angegebenen (oder sonst die
 alltäglichsten) spanischen W-Fragewörter vor – jeweils mit deutscher
 Bedeutung – und bilde zu jedem Fragewort 1 kurze, sehr einfache
 Beispielfrage zum genannten Thema, inklusive kurzer beispielhafter Antwort.`,
-  guarani: `Erstelle dazu KEINEN Dialog, sondern eine GUARANÍ-Lektion: Stelle
-8–12 einfache Guaraní-Wörter oder Floskeln zum genannten Thema vor – nur
-solche, die man in Paraguay im Alltag wirklich hört. Für jedes Wort: zuerst
-das Guaraní-Wort LANGSAM und Silbe für Silbe, dann die deutsche Bedeutung,
-dann das spanische Äquivalent, dann das Guaraní-Wort noch einmal in einem
-kurzen Beispielsatz. Erfinde keine Wörter – wo Paraguayer im Alltag das
-spanische Wort benutzen, sag das ausdrücklich. Wiederhole am Ende alle Wörter
-noch einmal als kurze Liste.`,
   zusammenfassung: `Erstelle dazu KEINEN neuen Dialog, sondern eine
 WIEDERHOLUNGS-Lektion: Fasse das Wichtigste zu den genannten Themen oder
 Situationen zusammen. Gehe sie der Reihe nach durch und nenne je Thema die
@@ -99,7 +79,6 @@ dafür „… uno … dos … tres …"), dann die spanische Lösung.`
 
 function buildSystem(level, type) {
   const parts = [LEVEL_TONE[level], TYPE_FORMAT[type], REGION_HINT];
-  if (type !== "guarani") parts.push(GUARANI_HINT);
   parts.push("Gib NUR den vorzulesenden Text aus – kein Markdown, keine Überschriften.");
   return parts.join("\n");
 }
@@ -107,7 +86,7 @@ function buildSystem(level, type) {
 // Curriculum: Themen sind in Blöcken nach Niveau sortiert. Jedes Thema ist
 // entweder ein reiner String (= normale Dialog-Lektion) oder ein
 // { topic, type }-Objekt für die speziellen Lektionstypen (Vokabular/Verben/
-// Beschreibung/Fragen/Guaraní/Wiederholung).
+// Beschreibung/Fragen/Wiederholung).
 //
 // Niveau-Steuerung (2026-09-13, Nutzerwunsch für Corinne, absolute
 // Anfängerin): das Niveau steigt NICHT mehr automatisch mit der Episoden-
@@ -133,7 +112,7 @@ export const CURRICULUM = [
     level: "A0",
     topics: [
       { topic: "Begrüßung und Höflichkeit: hola, buenas, cómo estás, bien, por favor, gracias, de nada, chau", type: "vokabular" },
-      { topic: "die ersten Guaraní-Wörter: mba'éichapa, iporã, aguyje, heẽ, nahániri", type: "guarani" },
+      { topic: "Ja und Nein sagen, sich entschuldigen: sí, no, perdón, disculpa, permiso", type: "vokabular" },
       { topic: "Zahlen von 0 bis 10", type: "vokabular" },
       { topic: "Zahlen von 11 bis 20 und wichtige Mengenwörter: un poco, mucho, todo, nada", type: "vokabular" },
       { topic: "die wichtigsten Sätze zum Sagen, was man will oder hat: quiero, tengo, hay, es, está", type: "verben" },
@@ -141,15 +120,15 @@ export const CURRICULUM = [
       { topic: "Farben", type: "vokabular" },
       { topic: "Familie: mamá, papá, hijo/hija, hermano/hermana, abuelo/abuela", type: "vokabular" },
       { topic: "Essen und Trinken: agua, comida, pan, carne, fruta, tereré, chipa, mandioca", type: "vokabular" },
-      { topic: "Wiederholung 1: Begrüßung, Guaraní-Grundwörter, Zahlen 0–20, quiero/tengo/hay/es/está/puedo/me gusta, Farben, Familie und Essen – von jeder Gruppe nur die 2–3 wichtigsten Wörter", type: "zusammenfassung" },
+      { topic: "Wiederholung 1: Begrüßung, Ja/Nein/Entschuldigung, Zahlen 0–20, quiero/tengo/hay/es/está/puedo/me gusta, Farben, Familie und Essen – von jeder Gruppe nur die 2–3 wichtigsten Wörter", type: "zusammenfassung" },
       { topic: "wichtige Adjektive: bueno/malo, grande/chico, lindo/feo, caro/barato", type: "beschreibung" },
       { topic: "Wochentage und Tageszeiten: hoy, mañana, la mañana, la tarde, la noche", type: "vokabular" },
       { topic: "Zu Hause: casa, cuarto, baño, cocina, cama", type: "vokabular" },
       { topic: "beim Einkaufen: cuánto cuesta, quiero comprar, el precio, caro, barato", type: "vokabular" },
       { topic: "wichtige Wörter für Gefühle: feliz, cansado/a, tengo hambre, tengo sed", type: "beschreibung" },
-      { topic: "Guaraní im Alltag: weitere Wörter, die Paraguayer oft mitten im Spanischen benutzen", type: "guarani" },
+      { topic: "Wegbeschreibung: cerca, lejos, aquí, allí, a la derecha, a la izquierda", type: "vokabular" },
       { topic: "die 3 wichtigsten Fragewörter: qué, dónde, cuánto", type: "fragen" },
-      { topic: "Wiederholung 2: Adjektive, Wochentage, Zuhause, Einkaufen, Gefühle, Guaraní im Alltag und Fragewörter – von jeder Gruppe nur die 2–3 wichtigsten Wörter", type: "zusammenfassung" }
+      { topic: "Wiederholung 2: Adjektive, Wochentage, Zuhause, Einkaufen, Gefühle, Wegbeschreibung und Fragewörter – von jeder Gruppe nur die 2–3 wichtigsten Wörter", type: "zusammenfassung" }
     ]
   },
   {
@@ -159,7 +138,7 @@ export const CURRICULUM = [
     // ggf. nochmal auf "ohne Grammatik/Zeitformen" geprüft werden.
     level: "A1",
     topics: [
-      { topic: "die ersten Guaraní-Wörter: hallo, danke, ja, nein, entschuldigung", type: "guarani" },
+      { topic: "Begrüßung, Danke sagen, Ja und Nein, sich entschuldigen", type: "vokabular" },
       "am Flughafen Asunción ankommen: Einreise und Passkontrolle",
       { topic: "Wortschatz: Flughafen, Gepäck und Dokumente", type: "vokabular" },
       "die Gepäckausgabe finden und durch den Zoll gehen",
@@ -171,7 +150,7 @@ export const CURRICULUM = [
       "einen Mietwagen am Flughafen abholen und die Reservierung bestätigen",
       { topic: "Wortschatz: Mietwagen, Tanken und Versicherung", type: "vokabular" },
       "Zahlen und Preise in Guaraníes verstehen",
-      { topic: "höflich grüßen und sich bedanken – auf Spanisch und Guaraní", type: "guarani" },
+      "höflich grüßen und sich bedanken",
       "im Supermarkt in Asunción einkaufen",
       { topic: "Wiederholung A1: Ankunft am Flughafen, Airbnb-Check-in und Mietwagen", type: "zusammenfassung" }
     ]
@@ -187,13 +166,13 @@ export const CURRICULUM = [
       { topic: "Wortschatz: Auto, Straße und Wegbeschreibung in Paraguay", type: "vokabular" },
       "bei einer Verkehrskontrolle ruhig und höflich reagieren",
       "Smalltalk mit dem Gastgeber: woher kommst du, wie lange bleibst du",
-      { topic: "Guaraní im Alltag: Wörter, die Paraguayer mitten im Spanischen benutzen", type: "guarani" },
+      { topic: "Wortschatz: Verkehr, Busse und sich in der Stadt bewegen", type: "vokabular" },
       "im Restaurant typisch paraguayisch bestellen (Chipa, Sopa paraguaya, Tereré)",
       { topic: "die Unterkunft und die Umgebung beschreiben", type: "beschreibung" },
       "einen Ausflug planen und nach dem Weg fragen",
       "Geld wechseln und mit Karte bezahlen",
       "den Aufenthalt im Airbnb um ein paar Tage verlängern",
-      { topic: "Wiederholung A2: Probleme melden, Auto fahren und Guaraní-Basics", type: "zusammenfassung" }
+      { topic: "Wiederholung A2: Probleme melden, Auto fahren und wichtige Alltagswörter", type: "zusammenfassung" }
     ]
   },
   {
@@ -206,7 +185,7 @@ export const CURRICULUM = [
       { topic: "Wortschatz: Geld, Bank und Bezahlen in Paraguay", type: "vokabular" },
       "bei einer Behörde eine Auskunft einholen",
       "in der Apotheke oder beim Arzt ein Problem schildern",
-      { topic: "Jopara: wie Paraguayer Spanisch und Guaraní im Alltag mischen", type: "guarani" },
+      { topic: "Wortschatz: Behörden, Formulare und offizielle Angelegenheiten", type: "vokabular" },
       "auf dem Markt oder mit einem Handwerker über den Preis verhandeln",
       "ein Haus oder eine Wohnung längerfristig mieten",
       "über Klima, Menschen und das Leben in Paraguay sprechen",

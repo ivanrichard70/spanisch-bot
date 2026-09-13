@@ -13,12 +13,15 @@ keine Bedienung. Späteres Ziel: Die Lektionen erscheinen automatisch in einer
 Podcast-App und laufen über CarPlay / Android Auto.
 
 **Lernerin (seit 2026-09-13): Corinne**, absolute Anfängerin ohne Vorkenntnisse.
-Ziel ist südamerikanisches Spanisch mit Fokus auf Paraguay (voseo, Guaraní-Wörter,
-Guaraníes als Währung – s. `REGION_HINT`/`GUARANI_HINT`). Bewusst **ohne
-Grammatik-Erklärungen und ohne verschiedene Zeitformen** – nur die wichtigsten
-Wörter, feste einfache Sätze mit den nützlichsten Verben und Adjektiven, mit
-eingebauter Wiederholung. Das Niveau steigt **nur auf ausdrücklichen Wunsch**,
-nicht automatisch mit der Zeit (s. „Themenrotation & Niveau-Steuerung" unten).
+Ziel ist südamerikanisches Spanisch mit Fokus auf Paraguay (voseo, Guaraníes als
+Währung – s. `REGION_HINT`). **Bewusst NUR Spanisch, kein Guaraní** (kurz
+eingeführt am 2026-09-13, noch am selben Tag auf Nutzerwunsch wieder entfernt –
+s. Git-Historie `lesson-generator.src.mjs`, ehemals `GUARANI_HINT`/type
+`"guarani"`). Bewusst **ohne Grammatik-Erklärungen und ohne verschiedene
+Zeitformen** – nur die wichtigsten Wörter, feste einfache Sätze mit den
+nützlichsten Verben und Adjektiven, mit eingebauter Wiederholung. Das Niveau
+steigt **nur auf ausdrücklichen Wunsch**, nicht automatisch mit der Zeit (s.
+„Themenrotation & Niveau-Steuerung" unten).
 
 Aktueller Fokus: der **Audio-Weg** (Lektionen zum Anhören).
 
@@ -219,21 +222,26 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   `/.netlify/functions/lektion?id=episodes/<Zeitstempel>.mp3`, das `lektion.mjs` jetzt
   zusätzlich zu `latest` unterstützt. Episoden-Titel im Feed zeigen das Thema
   (`Spanisch-Lektion: <Thema>`), Fallback aufs Datum bei alten Episoden ohne Thema-Metadatum.
-- **Umbau auf Corinne/absolute Anfängerin, Niveau A0 (2026-09-13, lokal gebaut &
-  gebündelt, noch NICHT committed/deployed, noch keine echte Lektion getestet):**
-  Nutzerwunsch: Lektionen jetzt für Corinne, komplette Anfängerin, südamerikanisches
-  Spanisch mit Fokus Paraguay, ohne Grammatik-Erklärungen und ohne verschiedene
-  Zeitformen, 3–5 statt fest 5 Lektionen/Tag, Niveau steigt nur auf ausdrücklichen
-  Wunsch statt automatisch. Umgesetzt: neuer Block `level: "A0"` in `CURRICULUM`
-  (18 Themen: Begrüßung, Guaraní-Basics, Zahlen, die wichtigsten Verb-Sätze ohne
+- **Umbau auf Corinne/absolute Anfängerin, Niveau A0 (2026-09-13, committed,
+  gepusht, deployed, per Testläufen verifiziert):** Nutzerwunsch: Lektionen
+  jetzt für Corinne, komplette Anfängerin, südamerikanisches Spanisch mit Fokus
+  Paraguay, ohne Grammatik-Erklärungen und ohne verschiedene Zeitformen, 3–5
+  statt fest 5 Lektionen/Tag, Niveau steigt nur auf ausdrücklichen Wunsch statt
+  automatisch. Umgesetzt: neuer Block `level: "A0"` in `CURRICULUM` (18 Themen:
+  Begrüßung, Ja/Nein/Entschuldigung, Zahlen, die wichtigsten Verb-Sätze ohne
   Konjugationslehre, Farben, Familie, Essen, Adjektive, Wochentage, Zuhause,
-  Einkaufen, Gefühle, Fragewörter, zwei Wiederholungs-Lektionen), neue Konstante
-  `ACTIVE_LEVELS = ["A0"]` ersetzt die alte episodenzahl-basierte Automatik
-  komplett (`pickForIndex` rotiert jetzt endlos nur durch die aktiven Blöcke,
-  `CURRICULUM_RESET_AT` entfernt – nicht mehr nötig), `EPISODES_PER_DAY` in
-  `generate-daily-background.src.mjs` würfelt jetzt 3–5 statt fest 5. Details
-  und offene Test-/Deploy-Schritte unter „Themenrotation & Niveau-Steuerung" und
-  „Nächster konkreter Schritt".
+  Einkaufen, Gefühle, Wegbeschreibung, Fragewörter, zwei Wiederholungs-
+  Lektionen), neue Konstante `ACTIVE_LEVELS = ["A0"]` ersetzt die alte
+  episodenzahl-basierte Automatik komplett (`pickForIndex` rotiert jetzt endlos
+  nur durch die aktiven Blöcke, `CURRICULUM_RESET_AT` entfernt – nicht mehr
+  nötig), `EPISODES_PER_DAY` in `generate-daily-background.src.mjs` würfelt
+  jetzt 3–5 statt fest 5. Im selben Zug (noch am 2026-09-13) wieder komplett
+  entfernt: jeglicher Guaraní-Inhalt (Hin-und-her s. „Kein Guaraní" unter
+  „Themenrotation & Niveau-Steuerung" – kurz eingeführt, dann verschärft, dann
+  auf Nutzerwunsch ganz rausgenommen). Drei Test-Lektionen live erzeugt und vom
+  Nutzer angehört (Themen: Gefühle, Guaraní-Alltag, Fragewörter) – Feedback:
+  Niveau/Ton passen, aber ohne Guaraní. Details unter „Themenrotation &
+  Niveau-Steuerung".
 - **Neuausrichtung auf die Paraguay-Reise (2026-08-23, live seit ca. 2026-08-24,
   Vorgänger-Curriculum der obigen A0-Anpassung):** `CURRICULUM` in `lesson-generator.src.mjs`
   komplett neu geschrieben – statt generischer Alltagsthemen jetzt konkret auf eine
@@ -243,13 +251,14 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   - **`REGION_HINT`** (in JEDEM System-Prompt, unabhängig vom Typ): erzwingt
     paraguayisches Spanisch statt Standard-/Spanien-Spanisch – voseo („vos tenés",
     „vení", „mirá", „dale" statt „tú tienes" etc.), Preise in Guaraníes statt Euro.
-  - **`GUARANI_HINT`** (in jeder Lektion außer Typ `guarani` selbst): baut 2–3
-    Guaraní-Wörter/Floskeln passend zum Thema ein (mit deutscher Übersetzung,
-    langsam/silbenweise vorgelesen) – Guaraní ist zweite Amtssprache Paraguays.
-  - zwei neue `type`-Werte in `TYPE_FORMAT`: **`guarani`** (reine Guaraní-
-    Wortschatz-Lektion, 8–12 Wörter/Floskeln) und **`zusammenfassung`**
-    (Wiederholungs-Lektion mit kurzer Selbstabfrage samt hörbarer Denkpause).
-    Beide auch in `feed.src.mjs` → `TYPE_LABELS` ergänzt („Guaraní" / „Wiederholung").
+  - **`GUARANI_HINT`** (in jeder Lektion außer Typ `guarani` selbst): baute 2–3
+    Guaraní-Wörter/Floskeln passend zum Thema ein. **Inzwischen wieder komplett
+    entfernt** (2026-09-13, s. „Kein Guaraní" unter „Themenrotation &
+    Niveau-Steuerung") – hier nur noch als Historie stehen gelassen.
+  - ein neuer `type`-Wert in `TYPE_FORMAT`: **`zusammenfassung`**
+    (Wiederholungs-Lektion mit kurzer Selbstabfrage samt hörbarer Denkpause,
+    auch in `feed.src.mjs` → `TYPE_LABELS` ergänzt). Es gab hier auch kurzzeitig
+    einen Typ `guarani` – ebenfalls wieder entfernt, s. o.
   - **`CURRICULUM_RESET_AT`** von `63` auf `169` hochgesetzt (Rotation beginnt ab
     Episode 169 wieder bei A1, ältere Episoden bleiben in Blobs erhalten und zählen
     nicht mehr für die Themenwahl).
@@ -266,9 +275,10 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   verwendet – freie Dialoge sind für absolute Anfänger zu unvorhersehbar),
   `vokabular` (strukturierte Wortschatz-Liste), `verben` (nützliche feste Sätze mit
   den wichtigsten Alltagsverben – bewusst OHNE Konjugations-/Grammatik-Erklärung),
-  `beschreibung` (Adjektive/Gefühle), `fragen` (W-Fragewörter), `guarani`
-  (Guaraní-Wortschatz) und `zusammenfassung` (Wiederholung mit Selbstabfrage).
-  System-Prompt wird aus Niveau-Ton + Typ-Formatierung zusammengesetzt
+  `beschreibung` (Adjektive/Gefühle) und `fragen` (W-Fragewörter) sowie
+  `zusammenfassung` (Wiederholung mit Selbstabfrage). Es gab kurzzeitig auch einen
+  Typ `guarani` (Guaraní-Wortschatz) – am 2026-09-13 auf Nutzerwunsch wieder
+  entfernt, s. u. System-Prompt wird aus Niveau-Ton + Typ-Formatierung zusammengesetzt
   (`buildSystem(level, type)`). `topic`, `level` und `type` werden in den
   Blob-Metadaten gespeichert und im Feed-Titel angezeigt
   (`Spanisch-Lektion (A0) – Vokabular: <Thema>`).
@@ -286,17 +296,35 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   über einen Niveau-Sprung hinweg).
 
   **A0-Block** (neu, aktuell einziger aktiver Block, 18 Themen): absolute
-  Grundlagen – Begrüßung, Guaraní-Basics, Zahlen 0–20, die nützlichsten
+  Grundlagen – Begrüßung, Ja/Nein/Entschuldigung, Zahlen 0–20, die nützlichsten
   Verb-Sätze (quiero/tengo/hay/es/está/puedo/me gusta/necesito) als fertige Sätze
   ohne Grammatik-Erklärung, Farben, Familie, Essen/Trinken, Adjektive, Wochentage,
-  Zuhause, Einkaufen, Gefühle, weitere Guaraní-Wörter, die 3 wichtigsten
+  Zuhause, Einkaufen, Gefühle, Wegbeschreibung, die 3 wichtigsten
   Fragewörter – dazwischen zwei `zusammenfassung`-Lektionen, die die jeweils
   vorherigen Themen NAMENTLICH auflisten (nicht nur "wiederhole die letzten
   Themen"), weil das TTS-Skript pro Lektion frisch von Claude erzeugt wird und
   KEIN Gedächtnis über frühere Lektionen hinweg hat – echte Wiederholung
   bestimmter Wörter funktioniert nur, wenn sie explizit im Topic-Text stehen.
   `LEVEL_TONE.A0` verbietet explizit Grammatik-Fachbegriffe und unterschiedliche
-  Zeitformen (nur Präsens, ohne die Bildung zu erklären).
+  Zeitformen (nur Präsens, ohne die Bildung zu erklären). Guaraní ist bewusst
+  NICHT Teil der Themen (s. u.).
+
+  **Kein Guaraní (Entscheidung 2026-09-13):** Ursprünglich (Paraguay-
+  Neuausrichtung 2026-08-23) sollte jede Lektion 2–3 Guaraní-Wörter enthalten
+  (`GUARANI_HINT`) plus einen eigenen Typ `guarani`. Das wurde am selben Tag wie
+  der A0-Umbau zunächst noch verschärft (Guaraní verpflichtend statt optional),
+  dann aber auf ausdrücklichen Nutzerwunsch ("nur Spanisch, ohne Guaraní")
+  wieder VOLLSTÄNDIG entfernt – `GUARANI_HINT` und `TYPE_FORMAT.guarani`
+  existieren nicht mehr, `REGION_HINT` verbietet Guaraní jetzt sogar explizit.
+  Alle `type: "guarani"`-Einträge im gesamten `CURRICULUM` (auch in den
+  dormanten A1/A2/B1-Blöcken) wurden durch reine Spanisch-Themen ersetzt, damit
+  beim späteren Freischalten höherer Level nicht unbemerkt wieder Guaraní
+  auftaucht. Die Währung heißt weiterhin „Guaraní" (Guaraníes) – das ist nur der
+  Name der Landeswährung, keine Sprachlektion, und bleibt in `REGION_HINT`.
+  **Falls Guaraní je wieder gewünscht wird:** nicht die alte Pflicht-Version
+  reaktivieren, sondern erst mit dem Nutzer klären, in welcher Dosierung
+  (optional/gelegentlich vs. verpflichtend) – das war zweimal in Folge falsch
+  kalibriert.
 
   **A1/A2/B1-Blöcke bleiben im Code, sind aber dormant** (nicht in
   `ACTIVE_LEVELS`) – ursprünglich für die Paraguay-Reise geschrieben
@@ -356,24 +384,17 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 
 ## Nächster konkreter Schritt
 
-Die Paraguay-Neuausrichtung vom 2026-08-23 ist längst live (Feed lief seither
-mehrere Wochen automatisch weiter, 248+ Episoden bis B1, alles verifiziert).
+Der Corinne/A0-Umbau vom 2026-09-13 ist committed, gepusht und deployed
+(inkl. der Guaraní-Entfernung, s. „Kein Guaraní" unter „Themenrotation &
+Niveau-Steuerung"). Drei Test-Lektionen wurden live erzeugt und vom Nutzer
+angehört (Themen: Gefühle, Guaraní-Alltag [noch mit altem Code], Fragewörter
+[nach dem ersten Guaraní-Fix]) – noch NICHT gegengehört: eine Lektion mit dem
+allerneuesten Stand (komplett ohne Guaraní).
 
-Offen ist jetzt der **Corinne/A0-Umbau vom 2026-09-13** (kompletter Wechsel auf
-absolute Anfängerin, kein Grammatik-/Zeitformen-Anspruch, manuelle statt
-automatischer Niveau-Steuerung, 3–5 statt fest 5 Lektionen/Tag, s.
-„Themenrotation & Niveau-Steuerung" oben): Quelldateien geändert
-(`lesson-generator.src.mjs`, `generate-daily-background.src.mjs`) und lokal neu
-gebündelt (`generate-background.mjs`, `generate-daily-background.mjs`) – Rotation
-der neuen 18 A0-Themen wurde offline (ohne API-Aufruf) durchgerechnet und geprüft.
-`feed.mjs` musste nicht neu gebündelt werden (keine Änderung dort nötig, TYPE_LABELS
-deckt alle verwendeten Typen bereits ab). **Noch nicht committed, nicht gepusht,
-nicht deployed, noch keine einzige echte A0-Lektion erzeugt.**
-
-- Vor dem ersten echten Test unbedingt beim Nutzer nachfragen (s. Memory: „Confirm
-  before API cost") – ein `generate-background`-Aufruf (manuell oder via
-  `netlify dev`) kostet Claude-/Gemini-Kontingent.
-- Danach eine A0-Lektion probehören und prüfen:
+- Eine weitere Test-Lektion erzeugen und von Corinne/dem Nutzer bestätigen
+  lassen, dass jetzt wirklich kein Guaraní mehr vorkommt (vorher kurz
+  nachfragen, s. Memory „Confirm before API cost" – kostet wieder Kontingent).
+- Weiterhin gegenchecken (falls noch nicht endgültig bestätigt):
   - Klingt es wirklich wie für eine absolute Anfängerin (sehr langsam, kurze
     Sätze, deutsche Übersetzung bei jedem Wort)?
   - Wurden Grammatik-Fachbegriffe und unterschiedliche Zeitformen tatsächlich
@@ -382,12 +403,10 @@ nicht deployed, noch keine einzige echte A0-Lektion erzeugt.**
     unverändert auch für A0)?
   - Funktioniert eine der beiden `zusammenfassung`-Lektionen (Wiederholung 1/2)
     wie gedacht – werden die zuvor genannten Wörter wirklich nochmal genannt?
-- Bei Zufriedenheit: committen, pushen (löst Netlify-Deploy aus, kostet Credits –
-  Nutzer-Bestätigung einholen), dann `generate-daily-background` einmal manuell
-  auslösen und den RSS-Feed/Titel-Labels live prüfen.
-- Corinne selbst hören lassen und Feedback einholen – ggf. `CURRICULUM`
-  (A0-Block) in `lesson-generator.src.mjs` nachjustieren (Reihenfolge, fehlende
-  Grundwörter, zu schnelles/langsames Tempo).
+- Corinne über einen längeren Zeitraum hören lassen (der nächtliche Cron läuft
+  automatisch mit 3–5 A0-Lektionen/Tag) und Feedback einholen – ggf.
+  `CURRICULUM` (A0-Block) in `lesson-generator.src.mjs` nachjustieren
+  (Reihenfolge, fehlende Grundwörter, zu schnelles/langsames Tempo).
 - Wenn Corinne bereit für mehr ist: **nur auf ihre/Nutzer-Ansage hin** `"A1"` zu
   `ACTIVE_LEVELS` hinzufügen (und vorher den A1-Block auf Grammatik-/Zeitformen-
   Freiheit prüfen, s. o.) – niemals von selbst eskalieren.

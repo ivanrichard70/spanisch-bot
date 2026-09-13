@@ -10602,20 +10602,9 @@ W\xF6rter kurz auf Deutsch erkl\xE4ren \u2013 die meisten S\xE4tze bleiben un\xF
 var REGION_HINT = `WICHTIG \u2013 Region: Der Lernende reist nach Paraguay.
 Verwende paraguayisches Spanisch: \u201Evos" statt \u201Et\xFA" (vos ten\xE9s, vos quer\xE9s,
 ven\xED, mir\xE1, dale), Anrede und H\xF6flichkeitsformen wie in Asunci\xF3n \xFCblich.
-Preise immer in Guaran\xEDes (der Landesw\xE4hrung), nicht in Euro.`;
-var GUARANI_HINT = `Guaran\xED: Paraguay ist zweisprachig. Das ist PFLICHT, nicht
-optional: Baue in JEDE Lektion mindestens 2 einfache Guaran\xED-W\xF6rter oder
--Floskeln ein \u2013 lass sie NIE ganz weg. Bevorzugt solche, die zum Thema passen;
-findest du f\xFCr diesen genauen Begriff keine passenden (weil Paraguayer im
-Alltag daf\xFCr nur das spanische Wort benutzen), nimm STATTDESSEN 1\u20132 g\xE4ngige
-Alltags-Guaran\xED-W\xF6rter, die zu JEDEM Thema passen (z. B. maitei = Gr\xFC\xDFe/hallo,
-mba'\xE9ichapa = wie geht's?, aguyje = danke, he\u1EBD = ja, nah\xE1niri = nein, ipor\xE3 =
-gut/sch\xF6n), und baue sie z. B. als kurze Begr\xFC\xDFung oder Bemerkung am Anfang
-oder Ende der Lektion ein. Nenne jeweils das Guaran\xED-Wort LANGSAM und Silbe
-f\xFCr Silbe, dann die deutsche Bedeutung, dann das Guaran\xED-Wort noch einmal.
-Erfinde keine W\xF6rter, die es nicht gibt \u2013 aber verzichte deswegen nicht auf
-Guaran\xED insgesamt, weiche stattdessen auf die g\xE4ngigen Alltagsw\xF6rter oben aus.
-Wiederhole die Guaran\xED-W\xF6rter am Ende der Lektion einmal kurz.`;
+Preise immer in Guaran\xEDes (der Landesw\xE4hrung), nicht in Euro. Bleib dabei
+ausschlie\xDFlich beim Spanischen \u2013 KEINE Guaran\xED-W\xF6rter oder -Floskeln
+einbauen, auch nicht vereinzelt.`;
 var TYPE_FORMAT = {
   dialog: `Erstelle dazu einen kurzen Dialog zwischen zwei Personen zum
 genannten Thema.`,
@@ -10641,14 +10630,6 @@ Fragew\xF6rtern: Stelle die im genannten Thema angegebenen (oder sonst die
 allt\xE4glichsten) spanischen W-Fragew\xF6rter vor \u2013 jeweils mit deutscher
 Bedeutung \u2013 und bilde zu jedem Fragewort 1 kurze, sehr einfache
 Beispielfrage zum genannten Thema, inklusive kurzer beispielhafter Antwort.`,
-  guarani: `Erstelle dazu KEINEN Dialog, sondern eine GUARAN\xCD-Lektion: Stelle
-8\u201312 einfache Guaran\xED-W\xF6rter oder Floskeln zum genannten Thema vor \u2013 nur
-solche, die man in Paraguay im Alltag wirklich h\xF6rt. F\xFCr jedes Wort: zuerst
-das Guaran\xED-Wort LANGSAM und Silbe f\xFCr Silbe, dann die deutsche Bedeutung,
-dann das spanische \xC4quivalent, dann das Guaran\xED-Wort noch einmal in einem
-kurzen Beispielsatz. Erfinde keine W\xF6rter \u2013 wo Paraguayer im Alltag das
-spanische Wort benutzen, sag das ausdr\xFCcklich. Wiederhole am Ende alle W\xF6rter
-noch einmal als kurze Liste.`,
   zusammenfassung: `Erstelle dazu KEINEN neuen Dialog, sondern eine
 WIEDERHOLUNGS-Lektion: Fasse das Wichtigste zu den genannten Themen oder
 Situationen zusammen. Gehe sie der Reihe nach durch und nenne je Thema die
@@ -10659,7 +10640,6 @@ daf\xFCr \u201E\u2026 uno \u2026 dos \u2026 tres \u2026"), dann die spanische L\
 };
 function buildSystem(level, type) {
   const parts = [LEVEL_TONE[level], TYPE_FORMAT[type], REGION_HINT];
-  if (type !== "guarani") parts.push(GUARANI_HINT);
   parts.push("Gib NUR den vorzulesenden Text aus \u2013 kein Markdown, keine \xDCberschriften.");
   return parts.join("\n");
 }
@@ -10676,7 +10656,7 @@ var CURRICULUM = [
     level: "A0",
     topics: [
       { topic: "Begr\xFC\xDFung und H\xF6flichkeit: hola, buenas, c\xF3mo est\xE1s, bien, por favor, gracias, de nada, chau", type: "vokabular" },
-      { topic: "die ersten Guaran\xED-W\xF6rter: mba'\xE9ichapa, ipor\xE3, aguyje, he\u1EBD, nah\xE1niri", type: "guarani" },
+      { topic: "Ja und Nein sagen, sich entschuldigen: s\xED, no, perd\xF3n, disculpa, permiso", type: "vokabular" },
       { topic: "Zahlen von 0 bis 10", type: "vokabular" },
       { topic: "Zahlen von 11 bis 20 und wichtige Mengenw\xF6rter: un poco, mucho, todo, nada", type: "vokabular" },
       { topic: "die wichtigsten S\xE4tze zum Sagen, was man will oder hat: quiero, tengo, hay, es, est\xE1", type: "verben" },
@@ -10684,15 +10664,15 @@ var CURRICULUM = [
       { topic: "Farben", type: "vokabular" },
       { topic: "Familie: mam\xE1, pap\xE1, hijo/hija, hermano/hermana, abuelo/abuela", type: "vokabular" },
       { topic: "Essen und Trinken: agua, comida, pan, carne, fruta, terer\xE9, chipa, mandioca", type: "vokabular" },
-      { topic: "Wiederholung 1: Begr\xFC\xDFung, Guaran\xED-Grundw\xF6rter, Zahlen 0\u201320, quiero/tengo/hay/es/est\xE1/puedo/me gusta, Farben, Familie und Essen \u2013 von jeder Gruppe nur die 2\u20133 wichtigsten W\xF6rter", type: "zusammenfassung" },
+      { topic: "Wiederholung 1: Begr\xFC\xDFung, Ja/Nein/Entschuldigung, Zahlen 0\u201320, quiero/tengo/hay/es/est\xE1/puedo/me gusta, Farben, Familie und Essen \u2013 von jeder Gruppe nur die 2\u20133 wichtigsten W\xF6rter", type: "zusammenfassung" },
       { topic: "wichtige Adjektive: bueno/malo, grande/chico, lindo/feo, caro/barato", type: "beschreibung" },
       { topic: "Wochentage und Tageszeiten: hoy, ma\xF1ana, la ma\xF1ana, la tarde, la noche", type: "vokabular" },
       { topic: "Zu Hause: casa, cuarto, ba\xF1o, cocina, cama", type: "vokabular" },
       { topic: "beim Einkaufen: cu\xE1nto cuesta, quiero comprar, el precio, caro, barato", type: "vokabular" },
       { topic: "wichtige W\xF6rter f\xFCr Gef\xFChle: feliz, cansado/a, tengo hambre, tengo sed", type: "beschreibung" },
-      { topic: "Guaran\xED im Alltag: weitere W\xF6rter, die Paraguayer oft mitten im Spanischen benutzen", type: "guarani" },
+      { topic: "Wegbeschreibung: cerca, lejos, aqu\xED, all\xED, a la derecha, a la izquierda", type: "vokabular" },
       { topic: "die 3 wichtigsten Fragew\xF6rter: qu\xE9, d\xF3nde, cu\xE1nto", type: "fragen" },
-      { topic: "Wiederholung 2: Adjektive, Wochentage, Zuhause, Einkaufen, Gef\xFChle, Guaran\xED im Alltag und Fragew\xF6rter \u2013 von jeder Gruppe nur die 2\u20133 wichtigsten W\xF6rter", type: "zusammenfassung" }
+      { topic: "Wiederholung 2: Adjektive, Wochentage, Zuhause, Einkaufen, Gef\xFChle, Wegbeschreibung und Fragew\xF6rter \u2013 von jeder Gruppe nur die 2\u20133 wichtigsten W\xF6rter", type: "zusammenfassung" }
     ]
   },
   {
@@ -10702,7 +10682,7 @@ var CURRICULUM = [
     // ggf. nochmal auf "ohne Grammatik/Zeitformen" geprüft werden.
     level: "A1",
     topics: [
-      { topic: "die ersten Guaran\xED-W\xF6rter: hallo, danke, ja, nein, entschuldigung", type: "guarani" },
+      { topic: "Begr\xFC\xDFung, Danke sagen, Ja und Nein, sich entschuldigen", type: "vokabular" },
       "am Flughafen Asunci\xF3n ankommen: Einreise und Passkontrolle",
       { topic: "Wortschatz: Flughafen, Gep\xE4ck und Dokumente", type: "vokabular" },
       "die Gep\xE4ckausgabe finden und durch den Zoll gehen",
@@ -10714,7 +10694,7 @@ var CURRICULUM = [
       "einen Mietwagen am Flughafen abholen und die Reservierung best\xE4tigen",
       { topic: "Wortschatz: Mietwagen, Tanken und Versicherung", type: "vokabular" },
       "Zahlen und Preise in Guaran\xEDes verstehen",
-      { topic: "h\xF6flich gr\xFC\xDFen und sich bedanken \u2013 auf Spanisch und Guaran\xED", type: "guarani" },
+      "h\xF6flich gr\xFC\xDFen und sich bedanken",
       "im Supermarkt in Asunci\xF3n einkaufen",
       { topic: "Wiederholung A1: Ankunft am Flughafen, Airbnb-Check-in und Mietwagen", type: "zusammenfassung" }
     ]
@@ -10730,13 +10710,13 @@ var CURRICULUM = [
       { topic: "Wortschatz: Auto, Stra\xDFe und Wegbeschreibung in Paraguay", type: "vokabular" },
       "bei einer Verkehrskontrolle ruhig und h\xF6flich reagieren",
       "Smalltalk mit dem Gastgeber: woher kommst du, wie lange bleibst du",
-      { topic: "Guaran\xED im Alltag: W\xF6rter, die Paraguayer mitten im Spanischen benutzen", type: "guarani" },
+      { topic: "Wortschatz: Verkehr, Busse und sich in der Stadt bewegen", type: "vokabular" },
       "im Restaurant typisch paraguayisch bestellen (Chipa, Sopa paraguaya, Terer\xE9)",
       { topic: "die Unterkunft und die Umgebung beschreiben", type: "beschreibung" },
       "einen Ausflug planen und nach dem Weg fragen",
       "Geld wechseln und mit Karte bezahlen",
       "den Aufenthalt im Airbnb um ein paar Tage verl\xE4ngern",
-      { topic: "Wiederholung A2: Probleme melden, Auto fahren und Guaran\xED-Basics", type: "zusammenfassung" }
+      { topic: "Wiederholung A2: Probleme melden, Auto fahren und wichtige Alltagsw\xF6rter", type: "zusammenfassung" }
     ]
   },
   {
@@ -10749,7 +10729,7 @@ var CURRICULUM = [
       { topic: "Wortschatz: Geld, Bank und Bezahlen in Paraguay", type: "vokabular" },
       "bei einer Beh\xF6rde eine Auskunft einholen",
       "in der Apotheke oder beim Arzt ein Problem schildern",
-      { topic: "Jopara: wie Paraguayer Spanisch und Guaran\xED im Alltag mischen", type: "guarani" },
+      { topic: "Wortschatz: Beh\xF6rden, Formulare und offizielle Angelegenheiten", type: "vokabular" },
       "auf dem Markt oder mit einem Handwerker \xFCber den Preis verhandeln",
       "ein Haus oder eine Wohnung l\xE4ngerfristig mieten",
       "\xFCber Klima, Menschen und das Leben in Paraguay sprechen",
