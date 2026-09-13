@@ -238,9 +238,9 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   jetzt 3–5 statt fest 5. Im selben Zug (noch am 2026-09-13) wieder komplett
   entfernt: jeglicher Guaraní-Inhalt (Hin-und-her s. „Kein Guaraní" unter
   „Themenrotation & Niveau-Steuerung" – kurz eingeführt, dann verschärft, dann
-  auf Nutzerwunsch ganz rausgenommen). Drei Test-Lektionen live erzeugt und vom
-  Nutzer angehört (Themen: Gefühle, Guaraní-Alltag, Fragewörter) – Feedback:
-  Niveau/Ton passen, aber ohne Guaraní. Details unter „Themenrotation &
+  auf Nutzerwunsch ganz rausgenommen). Fünf Test-Lektionen live erzeugt;
+  Nutzer-Feedback zur letzten (finalen) davon: **"klingt gut, kein Guaraní"**
+  – Umbau damit inhaltlich bestätigt. Details unter „Themenrotation &
   Niveau-Steuerung".
 - **Neuausrichtung auf die Paraguay-Reise (2026-08-23, live seit ca. 2026-08-24,
   Vorgänger-Curriculum der obigen A0-Anpassung):** `CURRICULUM` in `lesson-generator.src.mjs`
@@ -384,17 +384,16 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 
 ## Nächster konkreter Schritt
 
-Der Corinne/A0-Umbau vom 2026-09-13 ist committed, gepusht und deployed
-(inkl. der Guaraní-Entfernung, s. „Kein Guaraní" unter „Themenrotation &
-Niveau-Steuerung"). Drei Test-Lektionen wurden live erzeugt und vom Nutzer
-angehört (Themen: Gefühle, Guaraní-Alltag [noch mit altem Code], Fragewörter
-[nach dem ersten Guaraní-Fix]) – noch NICHT gegengehört: eine Lektion mit dem
-allerneuesten Stand (komplett ohne Guaraní).
+Der Corinne/A0-Umbau vom 2026-09-13 ist committed, gepusht, deployed und vom
+Nutzer per Testlektion bestätigt: **kein Guaraní mehr, klingt gut** (bestätigt
+anhand der Episode `episodes/2026-09-13T02-18-18-550Z.mp3`, Thema Begrüßung,
+erster Test mit dem endgültigen Code-Stand nach der Guaraní-Entfernung). Damit
+ist dieser Umbau inhaltlich abgeschlossen. Insgesamt 5 manuelle Test-Lektionen
+heute erzeugt (Tageskontingent 10) – vor dem nächtlichen Cron-Lauf (03:00 UTC,
+3–5 weitere) daher an diesem Tag keine weiteren manuellen Erzeugungen mehr
+auslösen, um das Tageslimit nicht zu sprengen.
 
-- Eine weitere Test-Lektion erzeugen und von Corinne/dem Nutzer bestätigen
-  lassen, dass jetzt wirklich kein Guaraní mehr vorkommt (vorher kurz
-  nachfragen, s. Memory „Confirm before API cost" – kostet wieder Kontingent).
-- Weiterhin gegenchecken (falls noch nicht endgültig bestätigt):
+Noch nicht einzeln gegengehört (kein Blocker, aber bei Gelegenheit prüfen):
   - Klingt es wirklich wie für eine absolute Anfängerin (sehr langsam, kurze
     Sätze, deutsche Übersetzung bei jedem Wort)?
   - Wurden Grammatik-Fachbegriffe und unterschiedliche Zeitformen tatsächlich
