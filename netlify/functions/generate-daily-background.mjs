@@ -10603,14 +10603,19 @@ var REGION_HINT = `WICHTIG \u2013 Region: Der Lernende reist nach Paraguay.
 Verwende paraguayisches Spanisch: \u201Evos" statt \u201Et\xFA" (vos ten\xE9s, vos quer\xE9s,
 ven\xED, mir\xE1, dale), Anrede und H\xF6flichkeitsformen wie in Asunci\xF3n \xFCblich.
 Preise immer in Guaran\xEDes (der Landesw\xE4hrung), nicht in Euro.`;
-var GUARANI_HINT = `Guaran\xED: Paraguay ist zweisprachig. Baue in diese Lektion
-2\u20133 einfache Guaran\xED-W\xF6rter oder -Floskeln ein, die zum Thema passen (z. B.
-maitei = Gr\xFC\xDFe/hallo, mba'\xE9ichapa = wie geht's?, aguyje = danke, he\u1EBD = ja,
-nah\xE1niri = nein). Nenne jeweils das Guaran\xED-Wort LANGSAM und Silbe f\xFCr Silbe,
-dann die deutsche Bedeutung, dann das Guaran\xED-Wort noch einmal. Erfinde nichts:
-wenn Paraguayer f\xFCr einen Begriff im Alltag das spanische Wort benutzen, sag das
-ehrlich statt ein Guaran\xED-Wort zu konstruieren. Wiederhole die Guaran\xED-W\xF6rter am
-Ende der Lektion einmal kurz.`;
+var GUARANI_HINT = `Guaran\xED: Paraguay ist zweisprachig. Das ist PFLICHT, nicht
+optional: Baue in JEDE Lektion mindestens 2 einfache Guaran\xED-W\xF6rter oder
+-Floskeln ein \u2013 lass sie NIE ganz weg. Bevorzugt solche, die zum Thema passen;
+findest du f\xFCr diesen genauen Begriff keine passenden (weil Paraguayer im
+Alltag daf\xFCr nur das spanische Wort benutzen), nimm STATTDESSEN 1\u20132 g\xE4ngige
+Alltags-Guaran\xED-W\xF6rter, die zu JEDEM Thema passen (z. B. maitei = Gr\xFC\xDFe/hallo,
+mba'\xE9ichapa = wie geht's?, aguyje = danke, he\u1EBD = ja, nah\xE1niri = nein, ipor\xE3 =
+gut/sch\xF6n), und baue sie z. B. als kurze Begr\xFC\xDFung oder Bemerkung am Anfang
+oder Ende der Lektion ein. Nenne jeweils das Guaran\xED-Wort LANGSAM und Silbe
+f\xFCr Silbe, dann die deutsche Bedeutung, dann das Guaran\xED-Wort noch einmal.
+Erfinde keine W\xF6rter, die es nicht gibt \u2013 aber verzichte deswegen nicht auf
+Guaran\xED insgesamt, weiche stattdessen auf die g\xE4ngigen Alltagsw\xF6rter oben aus.
+Wiederhole die Guaran\xED-W\xF6rter am Ende der Lektion einmal kurz.`;
 var TYPE_FORMAT = {
   dialog: `Erstelle dazu einen kurzen Dialog zwischen zwei Personen zum
 genannten Thema.`,

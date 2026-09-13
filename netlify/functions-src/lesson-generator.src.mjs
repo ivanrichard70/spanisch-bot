@@ -40,14 +40,19 @@ Preise immer in Guaraníes (der Landeswährung), nicht in Euro.`;
 
 // Guaraní ist zweite Amtssprache in Paraguay. Wird in JEDE Lektion eingestreut
 // (außer bei type "guarani" – dort ist Guaraní schon das ganze Thema).
-const GUARANI_HINT = `Guaraní: Paraguay ist zweisprachig. Baue in diese Lektion
-2–3 einfache Guaraní-Wörter oder -Floskeln ein, die zum Thema passen (z. B.
-maitei = Grüße/hallo, mba'éichapa = wie geht's?, aguyje = danke, heẽ = ja,
-nahániri = nein). Nenne jeweils das Guaraní-Wort LANGSAM und Silbe für Silbe,
-dann die deutsche Bedeutung, dann das Guaraní-Wort noch einmal. Erfinde nichts:
-wenn Paraguayer für einen Begriff im Alltag das spanische Wort benutzen, sag das
-ehrlich statt ein Guaraní-Wort zu konstruieren. Wiederhole die Guaraní-Wörter am
-Ende der Lektion einmal kurz.`;
+const GUARANI_HINT = `Guaraní: Paraguay ist zweisprachig. Das ist PFLICHT, nicht
+optional: Baue in JEDE Lektion mindestens 2 einfache Guaraní-Wörter oder
+-Floskeln ein – lass sie NIE ganz weg. Bevorzugt solche, die zum Thema passen;
+findest du für diesen genauen Begriff keine passenden (weil Paraguayer im
+Alltag dafür nur das spanische Wort benutzen), nimm STATTDESSEN 1–2 gängige
+Alltags-Guaraní-Wörter, die zu JEDEM Thema passen (z. B. maitei = Grüße/hallo,
+mba'éichapa = wie geht's?, aguyje = danke, heẽ = ja, nahániri = nein, iporã =
+gut/schön), und baue sie z. B. als kurze Begrüßung oder Bemerkung am Anfang
+oder Ende der Lektion ein. Nenne jeweils das Guaraní-Wort LANGSAM und Silbe
+für Silbe, dann die deutsche Bedeutung, dann das Guaraní-Wort noch einmal.
+Erfinde keine Wörter, die es nicht gibt – aber verzichte deswegen nicht auf
+Guaraní insgesamt, weiche stattdessen auf die gängigen Alltagswörter oben aus.
+Wiederhole die Guaraní-Wörter am Ende der Lektion einmal kurz.`;
 
 // Aufbau/Form der Lektion je nach Typ (unabhängig vom Niveau).
 const TYPE_FORMAT = {
