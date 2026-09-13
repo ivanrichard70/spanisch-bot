@@ -12,6 +12,14 @@ sie **freihändig anhören** kann – beim Autofahren, Kochen oder Putzen. Kein 
 keine Bedienung. Späteres Ziel: Die Lektionen erscheinen automatisch in einer
 Podcast-App und laufen über CarPlay / Android Auto.
 
+**Lernerin (seit 2026-09-13): Corinne**, absolute Anfängerin ohne Vorkenntnisse.
+Ziel ist südamerikanisches Spanisch mit Fokus auf Paraguay (voseo, Guaraní-Wörter,
+Guaraníes als Währung – s. `REGION_HINT`/`GUARANI_HINT`). Bewusst **ohne
+Grammatik-Erklärungen und ohne verschiedene Zeitformen** – nur die wichtigsten
+Wörter, feste einfache Sätze mit den nützlichsten Verben und Adjektiven, mit
+eingebauter Wiederholung. Das Niveau steigt **nur auf ausdrücklichen Wunsch**,
+nicht automatisch mit der Zeit (s. „Themenrotation & Niveau-Steuerung" unten).
+
 Aktueller Fokus: der **Audio-Weg** (Lektionen zum Anhören).
 
 ---
@@ -35,7 +43,7 @@ Background-Funktion per HTTP an, statt selbst zu generieren.
   (lamejs). Wird sowohl von `generate-background.mjs` als auch von
   `generate-daily-background.mjs` importiert (Single Source of Truth für Prompt,
   Curriculum/Themen, Claude-/Gemini-Aufruf, PCM→MP3-Konvertierung). Enthält das
-  **Curriculum** (`CURRICULUM`-Array, s. „Themenrotation & Niveau-Progression" unter
+  **Curriculum** (`CURRICULUM`-Array, s. „Themenrotation & Niveau-Steuerung" unter
   „Aktueller Stand") und `pickForIndex(n)`, das aus der n-ten Episode Thema, Niveau
   und passenden System-Prompt bestimmt.
 - **`netlify/functions/generate-background.mjs`** (Quelle: `generate-background.src.mjs`)
@@ -45,10 +53,11 @@ Background-Funktion per HTTP an, statt selbst zu generieren.
   `episodes/<Zeitstempel>.mp3` (Episoden-Historie).
 - **`netlify/functions/generate-daily-background.mjs`** (Quelle:
   `generate-daily-background.src.mjs`) – Hintergrund-Funktion für die **tägliche
-  Batch-Erzeugung** von 5 Lektionen. Berechnet alle 5 Themen EINMALIG vorab aus der
+  Batch-Erzeugung** von **3–5 Lektionen** (`EPISODES_PER_DAY`, zufällig gewürfelt bei
+  jedem Lauf, s. Nutzerwunsch 2026-09-13). Berechnet alle Themen EINMALIG vorab aus der
   aktuellen Episoden-Anzahl (nicht nach jeder Einzel-Erzeugung neu), erzeugt dann alle
-  5 **parallel** (`Promise.allSettled`) – damit bleibt die Gesamtlaufzeit nah an der
-  einer Einzel-Erzeugung (statt 5× hintereinander, was das 15-Min-Limit riskieren würde)
+  **parallel** (`Promise.allSettled`) – damit bleibt die Gesamtlaufzeit nah an der
+  einer Einzel-Erzeugung (statt hintereinander, was das 15-Min-Limit riskieren würde)
   und zwei gleichzeitige Themen-Berechnungen können sich nicht in die Quere kommen.
   Setzt `latest` am Ende explizit auf die tatsächlich neueste der erfolgreich erzeugten
   Episoden (Timestamp-Vergleich) – bei paralleler Erzeugung ist die Fertigstellungs-
@@ -72,7 +81,7 @@ Background-Funktion per HTTP an, statt selbst zu generieren.
 
 Endpunkte (online):
 - Erzeugen (1 Lektion, manuell): `/.netlify/functions/generate-background` (liefert 202 „Accepted", läuft im Hintergrund)
-- Erzeugen (5 Lektionen, Batch – normalerweise nur vom Scheduler aufgerufen): `/.netlify/functions/generate-daily-background`
+- Erzeugen (3–5 Lektionen, Batch – normalerweise nur vom Scheduler aufgerufen): `/.netlify/functions/generate-daily-background`
 - Automatisch täglich 03:00 UTC: `generate-daily-trigger` (Scheduled Function, kein manueller Aufruf nötig)
 - Anhören (aktuellste Lektion): `/.netlify/functions/lektion`
 - Anhören (bestimmte Episode): `/.netlify/functions/lektion?id=episodes/<Zeitstempel>.mp3`
@@ -162,10 +171,10 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   alle Erzeugungs-Aufrufe kommentarlos fehl (kein Audio, kein Fehler-Log in
   Netlify sichtbar – nur in Google AI Studio unter Kontingenten erkennbar, z. B. „11 / 10").
   Reset vermutlich Mitternacht Pacific Time. Die tägliche Scheduled Function erzeugt
-  bewusst nur **5** Lektionen/Tag (statt bis zu 10), damit Puffer für manuelle Aufrufe/
-  Tests am selben Tag bleibt. Bei manueller Massen-Erzeugung zusätzlich zur Batch-Funktion:
-  **Gesamt (Batch + manuell) max. ~9 pro Tag einplanen** (ein Puffer, da auch
-  fehlgeschlagene Versuche zählen).
+  bewusst nur **3–5** Lektionen/Tag (zufällig, statt bis zu 10), damit Puffer für
+  manuelle Aufrufe/Tests am selben Tag bleibt. Bei manueller Massen-Erzeugung
+  zusätzlich zur Batch-Funktion: **Gesamt (Batch + manuell) max. ~9 pro Tag
+  einplanen** (ein Puffer, da auch fehlgeschlagene Versuche zählen).
 - **Credits:** Jeder Netlify-Deploy kostet Credits. Möglichst lokal / im Codespace mit
   `netlify dev` testen und selten deployen.
 - **Fehlerausgabe:** Die Funktionen loggen Fehler als `CLAUDE-FEHLER`, `GEMINI-FEHLER`,
@@ -210,8 +219,23 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   `/.netlify/functions/lektion?id=episodes/<Zeitstempel>.mp3`, das `lektion.mjs` jetzt
   zusätzlich zu `latest` unterstützt. Episoden-Titel im Feed zeigen das Thema
   (`Spanisch-Lektion: <Thema>`), Fallback aufs Datum bei alten Episoden ohne Thema-Metadatum.
-- **Neuausrichtung auf die Paraguay-Reise (2026-08-23, lokal gebaut & gebündelt,
-  noch NICHT committed/deployed):** `CURRICULUM` in `lesson-generator.src.mjs`
+- **Umbau auf Corinne/absolute Anfängerin, Niveau A0 (2026-09-13, lokal gebaut &
+  gebündelt, noch NICHT committed/deployed, noch keine echte Lektion getestet):**
+  Nutzerwunsch: Lektionen jetzt für Corinne, komplette Anfängerin, südamerikanisches
+  Spanisch mit Fokus Paraguay, ohne Grammatik-Erklärungen und ohne verschiedene
+  Zeitformen, 3–5 statt fest 5 Lektionen/Tag, Niveau steigt nur auf ausdrücklichen
+  Wunsch statt automatisch. Umgesetzt: neuer Block `level: "A0"` in `CURRICULUM`
+  (18 Themen: Begrüßung, Guaraní-Basics, Zahlen, die wichtigsten Verb-Sätze ohne
+  Konjugationslehre, Farben, Familie, Essen, Adjektive, Wochentage, Zuhause,
+  Einkaufen, Gefühle, Fragewörter, zwei Wiederholungs-Lektionen), neue Konstante
+  `ACTIVE_LEVELS = ["A0"]` ersetzt die alte episodenzahl-basierte Automatik
+  komplett (`pickForIndex` rotiert jetzt endlos nur durch die aktiven Blöcke,
+  `CURRICULUM_RESET_AT` entfernt – nicht mehr nötig), `EPISODES_PER_DAY` in
+  `generate-daily-background.src.mjs` würfelt jetzt 3–5 statt fest 5. Details
+  und offene Test-/Deploy-Schritte unter „Themenrotation & Niveau-Steuerung" und
+  „Nächster konkreter Schritt".
+- **Neuausrichtung auf die Paraguay-Reise (2026-08-23, live seit ca. 2026-08-24,
+  Vorgänger-Curriculum der obigen A0-Anpassung):** `CURRICULUM` in `lesson-generator.src.mjs`
   komplett neu geschrieben – statt generischer Alltagsthemen jetzt konkret auf eine
   bevorstehende Paraguay-Reise zugeschnitten (Ankunft Flughafen Asunción, Airbnb-
   Check-in, Mietwagen, Behördengänge, Markt/Verhandeln, Rückfragen beim Gastgeber
@@ -229,39 +253,57 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   - **`CURRICULUM_RESET_AT`** von `63` auf `169` hochgesetzt (Rotation beginnt ab
     Episode 169 wieder bei A1, ältere Episoden bleiben in Blobs erhalten und zählen
     nicht mehr für die Themenwahl).
-  Stand: Quelldateien geändert und mit esbuild neu in `netlify/functions/feed.mjs`,
-  `generate-background.mjs`, `generate-daily-background.mjs` gebündelt (verifiziert:
-  Bundles enthalten `CURRICULUM_RESET_AT = 169`, `REGION_HINT`, `guarani`-Strings).
-  **Noch offen: Commit, Push, Deploy und ein echter Erzeugungs-Test** – bisher nur
-  lokal gebündelt, nichts davon ist auf Netlify live. Siehe „Nächster konkreter
-  Schritt".
-- **Themenrotation & Niveau-Progression, Cap bei B1 (2026-07-21 erste Version,
-  2026-07-31 überarbeitet – Cap+Reset noch nicht live beobachtet; die konkreten
-  Themen/Zahlen hier sind mit der Paraguay-Neuausrichtung 2026-08-23 überholt, s. o. –
-  Mechanik (Blöcke, Typ-Dimension, Reset-Konstante) gilt aber unverändert):**
+  Stand: committed, gepusht und deployed (Commit `053ba31`), live per Feed
+  verifiziert (2026-09-13: 248 Episoden, Paraguay-Themen, `guarani`- und
+  `zusammenfassung`-Typen erscheinen korrekt im Feed). `CURRICULUM_RESET_AT` gab
+  es hier noch, ist aber mit dem A0-Umbau oben inzwischen entfernt worden.
+- **Themenrotation & Niveau-Steuerung (2026-09-13 komplett umgebaut für Corinne,
+  absolute Anfängerin – ersetzt die vorherige automatische Niveau-Progression;
+  ältere Versionen dieses Abschnitts sind überholt):**
   `CURRICULUM`-Array in `lesson-generator.src.mjs`. Themen sind in Blöcken nach Niveau
-  sortiert, **gedeckelt bei B1** (aktuell A1: 15, A2: 15, B1: 15 Themen – kein B2/C1
-  mehr, s. u.), jedes Niveau mit eigenem Ton (`LEVEL_TONE`: Tempo/Übersetzungsanteil
-  steigt von Block zu Block) UND jedes Thema mit einem **Typ** (`TYPE_FORMAT`):
-  `dialog` (Standard) sowie die Sonderformen `vokabular` (strukturierte
-  Wortschatz-Liste, aktuell 3× im Curriculum),
-  `verben` (wichtige Alltagsverben, 1×), `beschreibung` (Personen/Orte beschreiben, 1×)
-  und `fragen` (W-Fragewörter, 1×) – System-Prompt wird aus Niveau-Ton + Typ-Formatierung
-  zusammengesetzt (`buildSystem(level, type)`). `pickForIndex(n)` (n = Anzahl bisheriger
-  Episoden) arbeitet sich block für block durch: ein Thema wiederholt sich erst, wenn
-  sein ganzer Niveau-Block durch ist. Ist der letzte Block (B1) einmal komplett durch,
-  wird nur noch er zyklisch wiederholt (kein Rücksprung auf A1, aber auch kein Steigen
-  über B1 hinaus). `topic`, `level` und `type` werden in den Blob-Metadaten gespeichert
-  und im Feed-Titel angezeigt (`Spanisch-Lektion (B1) – Vokabular: <Thema>`).
-  **`CURRICULUM_RESET_AT = 63`** (Konstante in `lesson-generator.src.mjs`): `pickForIndex`
-  rechnet intern mit `index - CURRICULUM_RESET_AT`, damit die Rotation ab Episode 63
-  wieder bei A1 beginnt, OHNE die vorhandenen 63 Episoden zu löschen (bleiben unverändert
-  in Blobs erhalten, zählen für die Themenwahl aber nicht mehr mit). Grund: Ursprünglich
-  lief die Progression bis C1 (Cap+Themenzahl der ersten Version), aber nach 10 Tagen
-  automatischem Batch-Betrieb (14→63 Episoden) Nutzer-Feedback: zu schwierig/zu schnelle
-  Wiederholung auf C1-Niveau, gewünscht war ein Neustart bei A1 mit Deckel bei B1 und mehr
-  Varianz (Sonder-Typen) im unteren Bereich. Falls das Curriculum je wieder neu gestartet
-  werden soll: `CURRICULUM_RESET_AT` auf die dann aktuelle Episoden-Anzahl setzen.
+  sortiert, jedes Niveau mit eigenem Ton (`LEVEL_TONE`) UND jedes Thema mit einem
+  **Typ** (`TYPE_FORMAT`): `dialog` (Standard, wird im A0-Block bewusst NICHT
+  verwendet – freie Dialoge sind für absolute Anfänger zu unvorhersehbar),
+  `vokabular` (strukturierte Wortschatz-Liste), `verben` (nützliche feste Sätze mit
+  den wichtigsten Alltagsverben – bewusst OHNE Konjugations-/Grammatik-Erklärung),
+  `beschreibung` (Adjektive/Gefühle), `fragen` (W-Fragewörter), `guarani`
+  (Guaraní-Wortschatz) und `zusammenfassung` (Wiederholung mit Selbstabfrage).
+  System-Prompt wird aus Niveau-Ton + Typ-Formatierung zusammengesetzt
+  (`buildSystem(level, type)`). `topic`, `level` und `type` werden in den
+  Blob-Metadaten gespeichert und im Feed-Titel angezeigt
+  (`Spanisch-Lektion (A0) – Vokabular: <Thema>`).
+
+  **Niveau steigt NICHT mehr automatisch.** Eine Konstante `ACTIVE_LEVELS` (aktuell
+  `["A0"]`) legt fest, welche Blöcke aus `CURRICULUM` überhaupt verwendet werden.
+  `pickForIndex(n)` flacht nur die aktiven Blöcke zu einem Pool ab und rotiert
+  endlos hindurch (`ACTIVE_POOL[n % ACTIVE_POOL.length]`) – ein Thema wiederholt
+  sich erst, wenn der ganze aktive Pool durchgelaufen ist. Soll das Niveau steigen,
+  MUSS das ausdrücklich gewünscht werden (z. B. „jetzt A1 dazu nehmen") – dann wird
+  der nächste Level-String zu `ACTIVE_LEVELS` hinzugefügt (z. B. `["A0", "A1"]`) und
+  neu gebündelt/deployed. Alte Themen bleiben dabei bewusst im Pool: durchmischtes
+  Wiederholen von A0-Wortschatz zusammen mit neuem A1-Stoff ist gewollt (erfüllt den
+  Wunsch nach ständiger Wiederholung der wichtigsten Wörter/Verben/Adjektive auch
+  über einen Niveau-Sprung hinweg).
+
+  **A0-Block** (neu, aktuell einziger aktiver Block, 18 Themen): absolute
+  Grundlagen – Begrüßung, Guaraní-Basics, Zahlen 0–20, die nützlichsten
+  Verb-Sätze (quiero/tengo/hay/es/está/puedo/me gusta/necesito) als fertige Sätze
+  ohne Grammatik-Erklärung, Farben, Familie, Essen/Trinken, Adjektive, Wochentage,
+  Zuhause, Einkaufen, Gefühle, weitere Guaraní-Wörter, die 3 wichtigsten
+  Fragewörter – dazwischen zwei `zusammenfassung`-Lektionen, die die jeweils
+  vorherigen Themen NAMENTLICH auflisten (nicht nur "wiederhole die letzten
+  Themen"), weil das TTS-Skript pro Lektion frisch von Claude erzeugt wird und
+  KEIN Gedächtnis über frühere Lektionen hinweg hat – echte Wiederholung
+  bestimmter Wörter funktioniert nur, wenn sie explizit im Topic-Text stehen.
+  `LEVEL_TONE.A0` verbietet explizit Grammatik-Fachbegriffe und unterschiedliche
+  Zeitformen (nur Präsens, ohne die Bildung zu erklären).
+
+  **A1/A2/B1-Blöcke bleiben im Code, sind aber dormant** (nicht in
+  `ACTIVE_LEVELS`) – ursprünglich für die Paraguay-Reise geschrieben
+  (2026-08-23, Flughafen/Airbnb/Mietwagen/Behörden/Markt), enthalten mehr
+  Dialog und implizit mehr Grammatikvielfalt als der A0-Block. Vor dem
+  Freischalten (A1 zu `ACTIVE_LEVELS` hinzufügen) ggf. prüfen, ob sie noch zum
+  "ohne Grammatik/Zeitformen"-Prinzip passen oder erst angepasst werden sollten.
 
 - **Cover-Art & Range-Requests (2026-07-19 behoben, deployed & verifiziert):** Feedback
   (vermutlich aus einem Podcast-Validator) bemängelte fehlendes `<itunes:image>` (Pflichtfeld
@@ -290,11 +332,12 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
 **Bekannte Lücken im Feed (bewusst zurückgestellt):**
 - `feed.mjs` macht pro Aufruf eine `getMetadata`-Anfrage je Episode (N HEAD-Requests).
   Bei manueller/seltener Erzeugung unkritisch; bei vielen Episoden ggf. später cachen.
-- Nach dem B1-Block (45 Themen ab `CURRICULUM_RESET_AT` durch, s. Paraguay-
-  Neuausrichtung oben) wiederholen sich dessen 15 B1-Themen alle 3 Tage (bei 5/Tag)
-  endlos – das ist ab jetzt so gewollt (Cap bei B1), aber falls die Wiederholung auf
-  Dauer zu eintönig wird: `CURRICULUM` in `lesson-generator.src.mjs` um weitere
-  B1-Themen ergänzen (Block einfach länger machen, keine Struktur-Änderung nötig).
+- Der aktive A0-Pool hat 18 Themen und wiederholt sich bei 3–5 Lektionen/Tag alle
+  ca. 4–6 Tage komplett (inkl. der beiden Wiederholungs-Lektionen) – das ist
+  gewollt (s. Nutzerwunsch nach ständiger Wiederholung), falls es Corinne auf
+  Dauer zu eintönig wird: `CURRICULUM`-Block `A0` in `lesson-generator.src.mjs`
+  um weitere Themen ergänzen (Block einfach länger machen, keine
+  Struktur-Änderung nötig, `ACTIVE_POOL` passt sich automatisch an).
 
 **Spätere Ausbaustufen:**
 - Lernermodell: Wortschatz & Schwächen mitführen, Lektionen daran anpassen
@@ -306,35 +349,45 @@ zurückwechseln.** Die zwei Variablen sind im Netlify-Dashboard angelegt (nicht 
   Progression"), aktuell mit vier Sonderformen. Bei Bedarf `TYPE_FORMAT` in
   `lesson-generator.src.mjs` um weitere Typen ergänzen und im `CURRICULUM` an
   passenden Stellen einstreuen – gemischt in denselben Feed (bewusste Entscheidung des
-  Nutzers – nicht als separater Feed pro Level/Typ).
+  Nutzers – nicht als separater Feed pro Level/Typ). Details zur type-Dimension
+  s. „Themenrotation & Niveau-Steuerung".
 
 ---
 
 ## Nächster konkreter Schritt
 
-Der automatische Cron-Trigger läuft zuverlässig (s. „Aktueller Stand"). Der B1-Cap-
-Reset vom 2026-07-31 ist im Feed-Betrieb angekommen. Offen ist jetzt die **Paraguay-
-Neuausrichtung vom 2026-08-23**: Quelldateien geändert und lokal neu gebündelt
-(`feed.mjs`, `generate-background.mjs`, `generate-daily-background.mjs`), aber
-**noch nicht committed, nicht gepusht, nicht deployed** – bisher nur eine bewusste
-Nutzer-Entscheidung, erstmal nur lokal zu committen (kein Push, kein Deploy).
+Die Paraguay-Neuausrichtung vom 2026-08-23 ist längst live (Feed lief seither
+mehrere Wochen automatisch weiter, 248+ Episoden bis B1, alles verifiziert).
 
-- Commit lokal ausstehend bzw. gerade gemacht (Repo-Status per `git status` prüfen).
-- Vor dem Push: idealerweise lokal mit `netlify dev` testen, ob `generate-background`
-  mit dem neuen Curriculum sauber durchläuft (Region-Hint/Guaraní-Hint im Prompt,
-  neue Typen `guarani`/`zusammenfassung`) – kostet Gemini-/Claude-Kontingent, daher
-  vorher beim Nutzer nachfragen (s. Memory: „Confirm before API cost").
-- Danach Push nach GitHub (löst vermutlich automatischen Netlify-Deploy aus) und erst
-  dann live per echter Erzeugung verifizieren:
-  - Liefert die nächste Lektion tatsächlich paraguayisches Spanisch (voseo,
-    Guaraníes) statt Standard-Spanisch?
-  - Klingen die eingestreuten Guaraní-Wörter (`GUARANI_HINT`) und die reinen
-    Guaraní-Lektionen (`type: "guarani"`) inhaltlich plausibel, keine erfundenen
-    Wörter?
-  - Funktioniert die neue `zusammenfassung`-Lektion (Wiederholung + Selbstabfrage
-    mit hörbarer Pause) wie gedacht?
-  - Zeigt der Feed die neuen Typ-Labels korrekt („Spanisch-Lektion (A1) – Guaraní:
-    …" bzw. „… – Wiederholung: …")?
-- Nutzer-Feedback einholen, ob das Curriculum inhaltlich zur tatsächlichen Reise
-  passt (Reihenfolge/Themen), bei Bedarf `CURRICULUM` in `lesson-generator.src.mjs`
-  nachjustieren.
+Offen ist jetzt der **Corinne/A0-Umbau vom 2026-09-13** (kompletter Wechsel auf
+absolute Anfängerin, kein Grammatik-/Zeitformen-Anspruch, manuelle statt
+automatischer Niveau-Steuerung, 3–5 statt fest 5 Lektionen/Tag, s.
+„Themenrotation & Niveau-Steuerung" oben): Quelldateien geändert
+(`lesson-generator.src.mjs`, `generate-daily-background.src.mjs`) und lokal neu
+gebündelt (`generate-background.mjs`, `generate-daily-background.mjs`) – Rotation
+der neuen 18 A0-Themen wurde offline (ohne API-Aufruf) durchgerechnet und geprüft.
+`feed.mjs` musste nicht neu gebündelt werden (keine Änderung dort nötig, TYPE_LABELS
+deckt alle verwendeten Typen bereits ab). **Noch nicht committed, nicht gepusht,
+nicht deployed, noch keine einzige echte A0-Lektion erzeugt.**
+
+- Vor dem ersten echten Test unbedingt beim Nutzer nachfragen (s. Memory: „Confirm
+  before API cost") – ein `generate-background`-Aufruf (manuell oder via
+  `netlify dev`) kostet Claude-/Gemini-Kontingent.
+- Danach eine A0-Lektion probehören und prüfen:
+  - Klingt es wirklich wie für eine absolute Anfängerin (sehr langsam, kurze
+    Sätze, deutsche Übersetzung bei jedem Wort)?
+  - Wurden Grammatik-Fachbegriffe und unterschiedliche Zeitformen tatsächlich
+    vermieden (nur feste Präsens-Sätze, keine Konjugationstabellen)?
+  - Klingt das Voseo/Paraguay-Spanisch weiterhin korrekt (REGION_HINT gilt
+    unverändert auch für A0)?
+  - Funktioniert eine der beiden `zusammenfassung`-Lektionen (Wiederholung 1/2)
+    wie gedacht – werden die zuvor genannten Wörter wirklich nochmal genannt?
+- Bei Zufriedenheit: committen, pushen (löst Netlify-Deploy aus, kostet Credits –
+  Nutzer-Bestätigung einholen), dann `generate-daily-background` einmal manuell
+  auslösen und den RSS-Feed/Titel-Labels live prüfen.
+- Corinne selbst hören lassen und Feedback einholen – ggf. `CURRICULUM`
+  (A0-Block) in `lesson-generator.src.mjs` nachjustieren (Reihenfolge, fehlende
+  Grundwörter, zu schnelles/langsames Tempo).
+- Wenn Corinne bereit für mehr ist: **nur auf ihre/Nutzer-Ansage hin** `"A1"` zu
+  `ACTIVE_LEVELS` hinzufügen (und vorher den A1-Block auf Grammatik-/Zeitformen-
+  Freiheit prüfen, s. o.) – niemals von selbst eskalieren.

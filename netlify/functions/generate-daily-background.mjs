@@ -1,4 +1,4 @@
-// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/runtime-utils/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/0c2edf7f-f3fe-4dcd-95c6-54a5ad90d6e8/scratchpad/build/node_modules/@netlify/runtime-utils/dist/main.js
 var getString = (input) => typeof input === "string" ? input : JSON.stringify(input);
 var base64Decode = globalThis.Buffer ? (input) => Buffer.from(input, "base64").toString() : (input) => atob(input);
 var base64Encode = globalThis.Buffer ? (input) => Buffer.from(getString(input)).toString("base64") : (input) => btoa(getString(input));
@@ -17,7 +17,7 @@ var getEnvironment = () => {
   };
 };
 
-// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/otel/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/0c2edf7f-f3fe-4dcd-95c6-54a5ad90d6e8/scratchpad/build/node_modules/@netlify/otel/dist/main.js
 var GET_TRACER = "__netlify__getTracer";
 var getTracer = (name, version) => {
   return globalThis[GET_TRACER]?.(name, version);
@@ -33,7 +33,7 @@ function withActiveSpan(tracer, name, optionsOrFn, contextOrFn, fn) {
   return tracer.withActiveSpan(name, optionsOrFn, contextOrFn, func);
 }
 
-// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/blobs/dist/chunk-FWVYH726.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/0c2edf7f-f3fe-4dcd-95c6-54a5ad90d6e8/scratchpad/build/node_modules/@netlify/blobs/dist/chunk-6TDSNTDP.js
 var getEnvironmentContext = () => {
   const context = globalThis.netlifyBlobsContext || getEnvironment().get("NETLIFY_BLOBS_CONTEXT");
   if (typeof context !== "string" || !context) {
@@ -98,7 +98,7 @@ var NF_REQUEST_ID = "x-nf-request-id";
 var DEPLOY_STORE_PREFIX = "deploy:";
 var SITE_STORE_PREFIX = "site:";
 var isDeniedWrite = (res, { method, storeName }) => (res.status === 401 || res.status === 403) && (method === "put" || method === "delete") && storeName !== void 0 && !storeName.startsWith(DEPLOY_STORE_PREFIX);
-var blobsErrorMessage = (res, context) => {
+var blobsErrorMessage = (res, context, responseBody) => {
   let details = res.headers.get(NF_ERROR) || `${res.status} status code`;
   if (res.headers.has(NF_REQUEST_ID)) {
     details += `, ID: ${res.headers.get(NF_REQUEST_ID)}`;
@@ -107,13 +107,23 @@ var blobsErrorMessage = (res, context) => {
     const storeName = context.storeName?.startsWith(SITE_STORE_PREFIX) ? context.storeName.slice(SITE_STORE_PREFIX.length) : context.storeName;
     return `Netlify Blobs could not write to store '${storeName}' (${details}). Builds and build plugins can only write to deploy-specific stores: use 'getDeployStore' instead of 'getStore', or pass a 'token' with write access to the store. If this code is not running in a build, check that the token and site ID are valid. See https://docs.netlify.com/build/data-and-storage/netlify-blobs/#deploy-specific-stores`;
   }
-  return `Netlify Blobs has generated an internal error (${details})`;
+  let message = `Netlify Blobs has generated an internal error (${details})`;
+  if (!res.headers.get(NF_ERROR) && responseBody) {
+    message += `: ${responseBody}`;
+  }
+  return message;
 };
 var BlobsInternalError = class extends Error {
-  constructor(res, context = {}) {
-    super(blobsErrorMessage(res, context));
+  constructor(res, context = {}, responseBody) {
+    super(blobsErrorMessage(res, context, responseBody));
     this.name = "BlobsInternalError";
+    this.status = res.status;
+    this.responseBody = responseBody;
   }
+};
+var createBlobsInternalError = async (res, context = {}) => {
+  const responseBody = await res.clone().text().catch(() => void 0);
+  return new BlobsInternalError(res, context, responseBody);
 };
 var collectIterator = async (iterator) => {
   const result = [];
@@ -156,13 +166,15 @@ var DEFAULT_RETRY_DELAY = getEnvironment().get("NODE_ENV") === "test" ? 1 : 5e3;
 var MIN_RETRY_DELAY = 1e3;
 var MAX_RETRY = 5;
 var RATE_LIMIT_HEADER = "X-RateLimit-Reset";
-var fetchAndRetry = async (fetch2, url, options, attemptsLeft = MAX_RETRY) => {
+var fetchAndRetry = async (fetch2, url, options, attemptsLeft = MAX_RETRY, getRetryUrl) => {
   try {
     const res = await fetch2(url, options);
-    if (attemptsLeft > 0 && (res.status === 429 || res.status >= 500)) {
+    const isRetryable = res.status === 429 || res.status >= 500 || getRetryUrl !== void 0 && res.status === 403;
+    if (attemptsLeft > 0 && isRetryable) {
       const delay = getDelay(res.headers.get(RATE_LIMIT_HEADER));
       await sleep(delay);
-      return fetchAndRetry(fetch2, url, options, attemptsLeft - 1);
+      const retryUrl = getRetryUrl ? await getRetryUrl() : url;
+      return fetchAndRetry(fetch2, retryUrl, options, attemptsLeft - 1, getRetryUrl);
     }
     return res;
   } catch (error) {
@@ -171,7 +183,8 @@ var fetchAndRetry = async (fetch2, url, options, attemptsLeft = MAX_RETRY) => {
     }
     const delay = getDelay();
     await sleep(delay);
-    return fetchAndRetry(fetch2, url, options, attemptsLeft - 1);
+    const retryUrl = getRetryUrl ? await getRetryUrl() : url;
+    return fetchAndRetry(fetch2, retryUrl, options, attemptsLeft - 1, getRetryUrl);
   }
 };
 var getDelay = (rateLimitReset) => {
@@ -267,7 +280,7 @@ var Client = class {
       method
     });
     if (res.status !== 200) {
-      throw new BlobsInternalError(res, { method, storeName });
+      throw await createBlobsInternalError(res, { method, storeName });
     }
     const { url: signedURL } = await res.json();
     const userHeaders = encodedMetadata ? { [METADATA_HEADER_INTERNAL]: encodedMetadata } : void 0;
@@ -315,7 +328,15 @@ var Client = class {
     if (body instanceof ReadableStream) {
       options.duplex = "half";
     }
-    return fetchAndRetry(this.fetch, url, options);
+    const usesSignedUrl = !this.edgeURL && key !== void 0 && storeName !== void 0 && method !== "head" && method !== "delete";
+    let getRetryUrl;
+    if (usesSignedUrl) {
+      getRetryUrl = async () => {
+        const finalRequest = await this.getFinalRequest({ consistency, key, metadata, method, parameters, storeName });
+        return finalRequest.url;
+      };
+    }
+    return fetchAndRetry(this.fetch, url, options, void 0, getRetryUrl);
   }
 };
 var getClientOptions = (options, contextOverride) => {
@@ -341,7 +362,7 @@ var getClientOptions = (options, contextOverride) => {
   return clientOptions;
 };
 
-// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@netlify/blobs/dist/main.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/0c2edf7f-f3fe-4dcd-95c6-54a5ad90d6e8/scratchpad/build/node_modules/@netlify/blobs/dist/main.js
 var LEGACY_STORE_INTERNAL_PREFIX = "netlify-internal/legacy-namespace/";
 var STATUS_OK = 200;
 var STATUS_PRE_CONDITION_FAILED = 412;
@@ -578,7 +599,7 @@ var Store = class _Store {
           modified: true
         };
       }
-      throw new BlobsInternalError(res, { method: "put", storeName: this.name });
+      throw await createBlobsInternalError(res, { method: "put", storeName: this.name });
     });
   }
   async setJSON(key, data, options = {}) {
@@ -784,7 +805,7 @@ var getStore = (input, options) => {
   );
 };
 
-// ../../tmp/claude-1000/-workspaces-spanisch-bot/86043653-e973-4bea-b624-ad5018432af0/scratchpad/build/node_modules/@breezystack/lamejs/dist/lamejs.js
+// ../../tmp/claude-1000/-workspaces-spanisch-bot/0c2edf7f-f3fe-4dcd-95c6-54a5ad90d6e8/scratchpad/build/node_modules/@breezystack/lamejs/dist/lamejs.js
 var fa = {};
 function Xa(w) {
   return new Int8Array(w);
@@ -10553,6 +10574,17 @@ var dr = fa.WavHeader = A1;
 var VOICE_NAME = "Kore";
 var TTS_MODEL = "gemini-2.5-flash-preview-tts";
 var LEVEL_TONE = {
+  A0: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion (ca. 1,5\u20132 Minuten)
+f\xFCr eine ABSOLUTE Anf\xE4ngerin ohne jede Vorkenntnis, die sie nebenbei anh\xF6rt
+(Autofahren, Kochen, Putzen). Sprich SEHR LANGSAM, in kurzen S\xE4tzen. KEINE
+Grammatik-Erkl\xE4rungen und KEINE Fachbegriffe (nicht "Verb", "Konjugation",
+"Subjekt" o. \xC4. erw\xE4hnen). KEINE unterschiedlichen Zeitformen \u2013 benutze
+ausschlie\xDFlich einfache, direkt im Alltag n\xFCtzliche W\xF6rter und feste kurze
+S\xE4tze im Pr\xE4sens, ohne die Bildung zu erkl\xE4ren (z. B. einfach "quiero agua"
+sagen, nicht erkl\xE4ren, wie "querer" gebildet wird). F\xFCr jedes Wort/jeden Satz:
+zuerst Spanisch, dann kurz die deutsche Bedeutung, dann Spanisch noch einmal.
+Wiederhole die 3\u20135 wichtigsten W\xF6rter der Lektion am Ende noch einmal als
+kurze Liste.`,
   A1: `Du bist Spanischlehrer und erstellst eine H\xD6R-Lektion (ca. 2 Minuten)
 f\xFCr einen Anf\xE4nger (A1), der sie beim Autofahren anh\xF6rt. Sprich LANGSAM und
 deutlich. Neue W\xF6rter: zuerst Spanisch, dann kurz die deutsche Bedeutung,
@@ -10588,20 +10620,22 @@ genannten Thema vor. F\xFCr jedes Wort: zuerst das spanische Wort, dann kurz
 die deutsche Bedeutung, dann das spanische Wort noch einmal in einem
 kurzen Beispielsatz.`,
   verben: `Erstelle dazu KEINEN Dialog, sondern eine Verben-Lektion: Stelle
-10\u201312 besonders wichtige spanische Alltagsverben vor (passend zum
-genannten Thema, z. B. ser, estar, tener, ir, hacer, querer, poder). F\xFCr
-jedes Verb: nenne den Infinitiv mit deutscher Bedeutung, dann 1\u20132 wichtige
-konjugierte Beispiels\xE4tze im Pr\xE4sens.`,
+6\u201310 besonders n\xFCtzliche kurze Redewendungen mit den wichtigsten
+spanischen Alltagsverben vor (passend zum genannten Thema, z. B. quiero,
+tengo, hay, es, est\xE1, puedo, me gusta) \u2013 IMMER als fertigen, direkt
+nutzbaren kurzen Satz, NIE als Grammatik-Erkl\xE4rung oder Konjugationstabelle
+und ohne die Verb-Bildung zu erkl\xE4ren. F\xFCr jeden Satz: zuerst Spanisch,
+dann kurz die deutsche Bedeutung, dann Spanisch noch einmal.`,
   beschreibung: `Erstelle dazu KEINEN Dialog, sondern eine Lektion zum
 Beschreiben: Beschreibe Personen, Orte oder Dinge zum genannten Thema in
 mehreren kurzen, klaren S\xE4tzen (z. B. Aussehen, Eigenschaften, Lage). Baue
 dabei wichtiges Beschreibungs-Vokabular (Adjektive) ein und erkl\xE4re neue
 Adjektive kurz auf Deutsch.`,
   fragen: `Erstelle dazu KEINEN Dialog, sondern eine Lektion zu
-Fragew\xF6rtern: Stelle die wichtigsten spanischen W-Fragew\xF6rter vor (qu\xE9,
-qui\xE9n, d\xF3nde, cu\xE1ndo, por qu\xE9, c\xF3mo, cu\xE1nto) \u2013 jeweils mit deutscher
-Bedeutung \u2013 und bilde zu jedem Fragewort 1\u20132 passende Beispielfragen zum
-genannten Thema, inklusive kurzer beispielhafter Antwort.`,
+Fragew\xF6rtern: Stelle die im genannten Thema angegebenen (oder sonst die
+allt\xE4glichsten) spanischen W-Fragew\xF6rter vor \u2013 jeweils mit deutscher
+Bedeutung \u2013 und bilde zu jedem Fragewort 1 kurze, sehr einfache
+Beispielfrage zum genannten Thema, inklusive kurzer beispielhafter Antwort.`,
   guarani: `Erstelle dazu KEINEN Dialog, sondern eine GUARAN\xCD-Lektion: Stelle
 8\u201312 einfache Guaran\xED-W\xF6rter oder Floskeln zum genannten Thema vor \u2013 nur
 solche, die man in Paraguay im Alltag wirklich h\xF6rt. F\xFCr jedes Wort: zuerst
@@ -10611,12 +10645,12 @@ kurzen Beispielsatz. Erfinde keine W\xF6rter \u2013 wo Paraguayer im Alltag das
 spanische Wort benutzen, sag das ausdr\xFCcklich. Wiederhole am Ende alle W\xF6rter
 noch einmal als kurze Liste.`,
   zusammenfassung: `Erstelle dazu KEINEN neuen Dialog, sondern eine
-WIEDERHOLUNGS-Lektion: Fasse das Wichtigste zu den genannten Situationen
-zusammen. Gehe die Situationen der Reihe nach durch und nenne je Situation
-die 3\u20135 S\xE4tze, die man dort wirklich braucht \u2013 jeweils Spanisch, kurze
-deutsche Bedeutung, Spanisch. Baue am Ende eine kleine Selbst-Abfrage ein:
-nenne die deutsche Bedeutung, dann eine h\xF6rbare Denkpause (schreibe daf\xFCr
-\u201E\u2026 uno \u2026 dos \u2026 tres \u2026"), dann die spanische L\xF6sung.`
+WIEDERHOLUNGS-Lektion: Fasse das Wichtigste zu den genannten Themen oder
+Situationen zusammen. Gehe sie der Reihe nach durch und nenne je Thema die
+2\u20135 W\xF6rter oder S\xE4tze, die man davon am meisten braucht \u2013 jeweils Spanisch,
+kurze deutsche Bedeutung, Spanisch. Baue am Ende eine kleine Selbst-Abfrage
+ein: nenne die deutsche Bedeutung, dann eine h\xF6rbare Denkpause (schreibe
+daf\xFCr \u201E\u2026 uno \u2026 dos \u2026 tres \u2026"), dann die spanische L\xF6sung.`
 };
 function buildSystem(level, type) {
   const parts = [LEVEL_TONE[level], TYPE_FORMAT[type], REGION_HINT];
@@ -10624,8 +10658,43 @@ function buildSystem(level, type) {
   parts.push("Gib NUR den vorzulesenden Text aus \u2013 kein Markdown, keine \xDCberschriften.");
   return parts.join("\n");
 }
+var ACTIVE_LEVELS = ["A0"];
 var CURRICULUM = [
   {
+    // Absoluter Anfänger-Block für Corinne: nur die wichtigsten Wörter,
+    // einfache feste Sätze mit den nützlichsten Verben, keine Grammatik,
+    // keine Zeitformen (s. LEVEL_TONE.A0). Bewusst kein "dialog"-Typ hier –
+    // freie Dialoge wären für absolute Anfänger zu komplex/unvorhersehbar.
+    // Die beiden "zusammenfassung"-Einträge fassen die jeweils vorherigen
+    // Themen namentlich zusammen, damit Wortschatz wirklich wiederholt wird
+    // (das TTS-Modell hat kein Gedächtnis über frühere Lektionen hinweg).
+    level: "A0",
+    topics: [
+      { topic: "Begr\xFC\xDFung und H\xF6flichkeit: hola, buenas, c\xF3mo est\xE1s, bien, por favor, gracias, de nada, chau", type: "vokabular" },
+      { topic: "die ersten Guaran\xED-W\xF6rter: mba'\xE9ichapa, ipor\xE3, aguyje, he\u1EBD, nah\xE1niri", type: "guarani" },
+      { topic: "Zahlen von 0 bis 10", type: "vokabular" },
+      { topic: "Zahlen von 11 bis 20 und wichtige Mengenw\xF6rter: un poco, mucho, todo, nada", type: "vokabular" },
+      { topic: "die wichtigsten S\xE4tze zum Sagen, was man will oder hat: quiero, tengo, hay, es, est\xE1", type: "verben" },
+      { topic: "die wichtigsten S\xE4tze f\xFCr K\xF6nnen, M\xF6gen und Brauchen: puedo, me gusta, necesito", type: "verben" },
+      { topic: "Farben", type: "vokabular" },
+      { topic: "Familie: mam\xE1, pap\xE1, hijo/hija, hermano/hermana, abuelo/abuela", type: "vokabular" },
+      { topic: "Essen und Trinken: agua, comida, pan, carne, fruta, terer\xE9, chipa, mandioca", type: "vokabular" },
+      { topic: "Wiederholung 1: Begr\xFC\xDFung, Guaran\xED-Grundw\xF6rter, Zahlen 0\u201320, quiero/tengo/hay/es/est\xE1/puedo/me gusta, Farben, Familie und Essen \u2013 von jeder Gruppe nur die 2\u20133 wichtigsten W\xF6rter", type: "zusammenfassung" },
+      { topic: "wichtige Adjektive: bueno/malo, grande/chico, lindo/feo, caro/barato", type: "beschreibung" },
+      { topic: "Wochentage und Tageszeiten: hoy, ma\xF1ana, la ma\xF1ana, la tarde, la noche", type: "vokabular" },
+      { topic: "Zu Hause: casa, cuarto, ba\xF1o, cocina, cama", type: "vokabular" },
+      { topic: "beim Einkaufen: cu\xE1nto cuesta, quiero comprar, el precio, caro, barato", type: "vokabular" },
+      { topic: "wichtige W\xF6rter f\xFCr Gef\xFChle: feliz, cansado/a, tengo hambre, tengo sed", type: "beschreibung" },
+      { topic: "Guaran\xED im Alltag: weitere W\xF6rter, die Paraguayer oft mitten im Spanischen benutzen", type: "guarani" },
+      { topic: "die 3 wichtigsten Fragew\xF6rter: qu\xE9, d\xF3nde, cu\xE1nto", type: "fragen" },
+      { topic: "Wiederholung 2: Adjektive, Wochentage, Zuhause, Einkaufen, Gef\xFChle, Guaran\xED im Alltag und Fragew\xF6rter \u2013 von jeder Gruppe nur die 2\u20133 wichtigsten W\xF6rter", type: "zusammenfassung" }
+    ]
+  },
+  {
+    // Dormant – erst aktiv, wenn "A1" zu ACTIVE_LEVELS hinzugefügt wird.
+    // Ursprünglich für die Paraguay-Reise geschrieben (2026-08-23); enthält
+    // mehr Grammatik/Dialog als der A0-Block und sollte vor dem Freischalten
+    // ggf. nochmal auf "ohne Grammatik/Zeitformen" geprüft werden.
     level: "A1",
     topics: [
       { topic: "die ersten Guaran\xED-W\xF6rter: hallo, danke, ja, nein, entschuldigung", type: "guarani" },
@@ -10686,19 +10755,11 @@ var CURRICULUM = [
     ]
   }
 ];
-var CURRICULUM_RESET_AT = 169;
+var ACTIVE_POOL = CURRICULUM.filter((block) => ACTIVE_LEVELS.includes(block.level)).flatMap((block) => block.topics.map((entry) => ({ level: block.level, entry })));
 function pickForIndex(index) {
-  let remaining = Math.max(0, index - CURRICULUM_RESET_AT);
-  for (let i = 0; i < CURRICULUM.length; i++) {
-    const block = CURRICULUM[i];
-    const isLast = i === CURRICULUM.length - 1;
-    if (remaining < block.topics.length || isLast) {
-      const entry = block.topics[remaining % block.topics.length];
-      const { topic, type } = typeof entry === "string" ? { topic: entry, type: "dialog" } : entry;
-      return { level: block.level, topic, type, system: buildSystem(block.level, type) };
-    }
-    remaining -= block.topics.length;
-  }
+  const { level, entry } = ACTIVE_POOL[index % ACTIVE_POOL.length];
+  const { topic, type } = typeof entry === "string" ? { topic: entry, type: "dialog" } : entry;
+  return { level, topic, type, system: buildSystem(level, type) };
 }
 function pcmToMp3(pcmBase64, sampleRate) {
   const bytes = Uint8Array.from(Buffer.from(pcmBase64, "base64"));
@@ -10765,7 +10826,7 @@ async function generateEpisodeAudio(topic, system) {
 }
 
 // netlify/functions-src/generate-daily-background.src.mjs
-var EPISODES_PER_DAY = 5;
+var EPISODES_PER_DAY = 3 + Math.floor(Math.random() * 3);
 async function generateAndStore(store, topic, level, type, system) {
   const mp3 = await generateEpisodeAudio(topic, system);
   const ab = mp3.buffer.slice(mp3.byteOffset, mp3.byteOffset + mp3.byteLength);

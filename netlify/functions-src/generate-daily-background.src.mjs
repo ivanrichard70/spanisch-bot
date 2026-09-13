@@ -1,9 +1,11 @@
 import { getStore } from "@netlify/blobs";
 import { pickForIndex, generateEpisodeAudio } from "./lesson-generator.src.mjs";
 
-// Wie viele Lektionen pro Tag erzeugt werden. Gemini-TTS-Tageskontingent ist 10
-// Anfragen/Tag (siehe CLAUDE.md) – 5 lässt Puffer für manuelle Aufrufe/Tests.
-const EPISODES_PER_DAY = 5;
+// Wie viele Lektionen pro Tag erzeugt werden: zufällig 3–5 (Nutzerwunsch
+// 2026-09-13), neu gewürfelt bei jedem Lauf. Gemini-TTS-Tageskontingent ist
+// 10 Anfragen/Tag (siehe CLAUDE.md) – auch bei 5 bleibt Puffer für manuelle
+// Aufrufe/Tests.
+const EPISODES_PER_DAY = 3 + Math.floor(Math.random() * 3);
 
 async function generateAndStore(store, topic, level, type, system) {
   const mp3 = await generateEpisodeAudio(topic, system);

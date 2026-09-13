@@ -5,6 +5,17 @@ export const TTS_MODEL = "gemini-2.5-flash-preview-tts";
 
 // Ton/Tempo/Übersetzungsanteil pro Niveau (unabhängig vom Lektionstyp).
 const LEVEL_TONE = {
+  A0: `Du bist Spanischlehrer und erstellst eine HÖR-Lektion (ca. 1,5–2 Minuten)
+für eine ABSOLUTE Anfängerin ohne jede Vorkenntnis, die sie nebenbei anhört
+(Autofahren, Kochen, Putzen). Sprich SEHR LANGSAM, in kurzen Sätzen. KEINE
+Grammatik-Erklärungen und KEINE Fachbegriffe (nicht "Verb", "Konjugation",
+"Subjekt" o. Ä. erwähnen). KEINE unterschiedlichen Zeitformen – benutze
+ausschließlich einfache, direkt im Alltag nützliche Wörter und feste kurze
+Sätze im Präsens, ohne die Bildung zu erklären (z. B. einfach "quiero agua"
+sagen, nicht erklären, wie "querer" gebildet wird). Für jedes Wort/jeden Satz:
+zuerst Spanisch, dann kurz die deutsche Bedeutung, dann Spanisch noch einmal.
+Wiederhole die 3–5 wichtigsten Wörter der Lektion am Ende noch einmal als
+kurze Liste.`,
   A1: `Du bist Spanischlehrer und erstellst eine HÖR-Lektion (ca. 2 Minuten)
 für einen Anfänger (A1), der sie beim Autofahren anhört. Sprich LANGSAM und
 deutlich. Neue Wörter: zuerst Spanisch, dann kurz die deutsche Bedeutung,
@@ -48,20 +59,22 @@ genannten Thema vor. Für jedes Wort: zuerst das spanische Wort, dann kurz
 die deutsche Bedeutung, dann das spanische Wort noch einmal in einem
 kurzen Beispielsatz.`,
   verben: `Erstelle dazu KEINEN Dialog, sondern eine Verben-Lektion: Stelle
-10–12 besonders wichtige spanische Alltagsverben vor (passend zum
-genannten Thema, z. B. ser, estar, tener, ir, hacer, querer, poder). Für
-jedes Verb: nenne den Infinitiv mit deutscher Bedeutung, dann 1–2 wichtige
-konjugierte Beispielsätze im Präsens.`,
+6–10 besonders nützliche kurze Redewendungen mit den wichtigsten
+spanischen Alltagsverben vor (passend zum genannten Thema, z. B. quiero,
+tengo, hay, es, está, puedo, me gusta) – IMMER als fertigen, direkt
+nutzbaren kurzen Satz, NIE als Grammatik-Erklärung oder Konjugationstabelle
+und ohne die Verb-Bildung zu erklären. Für jeden Satz: zuerst Spanisch,
+dann kurz die deutsche Bedeutung, dann Spanisch noch einmal.`,
   beschreibung: `Erstelle dazu KEINEN Dialog, sondern eine Lektion zum
 Beschreiben: Beschreibe Personen, Orte oder Dinge zum genannten Thema in
 mehreren kurzen, klaren Sätzen (z. B. Aussehen, Eigenschaften, Lage). Baue
 dabei wichtiges Beschreibungs-Vokabular (Adjektive) ein und erkläre neue
 Adjektive kurz auf Deutsch.`,
   fragen: `Erstelle dazu KEINEN Dialog, sondern eine Lektion zu
-Fragewörtern: Stelle die wichtigsten spanischen W-Fragewörter vor (qué,
-quién, dónde, cuándo, por qué, cómo, cuánto) – jeweils mit deutscher
-Bedeutung – und bilde zu jedem Fragewort 1–2 passende Beispielfragen zum
-genannten Thema, inklusive kurzer beispielhafter Antwort.`,
+Fragewörtern: Stelle die im genannten Thema angegebenen (oder sonst die
+alltäglichsten) spanischen W-Fragewörter vor – jeweils mit deutscher
+Bedeutung – und bilde zu jedem Fragewort 1 kurze, sehr einfache
+Beispielfrage zum genannten Thema, inklusive kurzer beispielhafter Antwort.`,
   guarani: `Erstelle dazu KEINEN Dialog, sondern eine GUARANÍ-Lektion: Stelle
 8–12 einfache Guaraní-Wörter oder Floskeln zum genannten Thema vor – nur
 solche, die man in Paraguay im Alltag wirklich hört. Für jedes Wort: zuerst
@@ -71,12 +84,12 @@ kurzen Beispielsatz. Erfinde keine Wörter – wo Paraguayer im Alltag das
 spanische Wort benutzen, sag das ausdrücklich. Wiederhole am Ende alle Wörter
 noch einmal als kurze Liste.`,
   zusammenfassung: `Erstelle dazu KEINEN neuen Dialog, sondern eine
-WIEDERHOLUNGS-Lektion: Fasse das Wichtigste zu den genannten Situationen
-zusammen. Gehe die Situationen der Reihe nach durch und nenne je Situation
-die 3–5 Sätze, die man dort wirklich braucht – jeweils Spanisch, kurze
-deutsche Bedeutung, Spanisch. Baue am Ende eine kleine Selbst-Abfrage ein:
-nenne die deutsche Bedeutung, dann eine hörbare Denkpause (schreibe dafür
-„… uno … dos … tres …"), dann die spanische Lösung.`
+WIEDERHOLUNGS-Lektion: Fasse das Wichtigste zu den genannten Themen oder
+Situationen zusammen. Gehe sie der Reihe nach durch und nenne je Thema die
+2–5 Wörter oder Sätze, die man davon am meisten braucht – jeweils Spanisch,
+kurze deutsche Bedeutung, Spanisch. Baue am Ende eine kleine Selbst-Abfrage
+ein: nenne die deutsche Bedeutung, dann eine hörbare Denkpause (schreibe
+dafür „… uno … dos … tres …"), dann die spanische Lösung.`
 };
 
 function buildSystem(level, type) {
@@ -86,17 +99,59 @@ function buildSystem(level, type) {
   return parts.join("\n");
 }
 
-// Curriculum: Themen sind in Blöcken nach Niveau sortiert, gedeckelt bei B1
-// (bewusst kein B2/C1 – Nutzerwunsch). Jedes Thema ist entweder ein reiner
-// String (= normale Dialog-Lektion) oder ein { topic, type }-Objekt für die
-// speziellen Lektionstypen (Vokabular/Verben/Beschreibung/Fragen). Die
-// Auswahl (siehe pickForIndex) arbeitet sich block für block durch – so
-// wiederholt sich ein Thema erst, wenn sein ganzer Niveau-Block durch ist,
-// UND das Niveau steigt mit der Zeit. Ist der letzte Block (B1) einmal
-// komplett durch, wird nur noch er wiederholt (kein Rücksprung auf A1, aber
-// auch kein Steigen über B1 hinaus).
+// Curriculum: Themen sind in Blöcken nach Niveau sortiert. Jedes Thema ist
+// entweder ein reiner String (= normale Dialog-Lektion) oder ein
+// { topic, type }-Objekt für die speziellen Lektionstypen (Vokabular/Verben/
+// Beschreibung/Fragen/Guaraní/Wiederholung).
+//
+// Niveau-Steuerung (2026-09-13, Nutzerwunsch für Corinne, absolute
+// Anfängerin): das Niveau steigt NICHT mehr automatisch mit der Episoden-
+// Anzahl. Aktiv sind nur die Blöcke, deren level in ACTIVE_LEVELS steht
+// (aktuell nur A0). pickForIndex rotiert endlos durch genau diese Blöcke
+// (in Reihenfolge, älteste Themen zuerst) – ein Thema wiederholt sich erst,
+// wenn der komplette aktive Pool durchgelaufen ist. Soll das Niveau steigen,
+// MUSS das explizit gewünscht werden: dann weiteren Level-String in
+// ACTIVE_LEVELS aufnehmen (z. B. ["A0", "A1"]) und neu bündeln/deployen –
+// alte Themen bleiben dabei im Pool (bewusst: durchmischtes Wiederholen
+// alter mit neuer Vokabel ist gewünscht, s. CLAUDE.md).
+const ACTIVE_LEVELS = ["A0"];
+
 export const CURRICULUM = [
   {
+    // Absoluter Anfänger-Block für Corinne: nur die wichtigsten Wörter,
+    // einfache feste Sätze mit den nützlichsten Verben, keine Grammatik,
+    // keine Zeitformen (s. LEVEL_TONE.A0). Bewusst kein "dialog"-Typ hier –
+    // freie Dialoge wären für absolute Anfänger zu komplex/unvorhersehbar.
+    // Die beiden "zusammenfassung"-Einträge fassen die jeweils vorherigen
+    // Themen namentlich zusammen, damit Wortschatz wirklich wiederholt wird
+    // (das TTS-Modell hat kein Gedächtnis über frühere Lektionen hinweg).
+    level: "A0",
+    topics: [
+      { topic: "Begrüßung und Höflichkeit: hola, buenas, cómo estás, bien, por favor, gracias, de nada, chau", type: "vokabular" },
+      { topic: "die ersten Guaraní-Wörter: mba'éichapa, iporã, aguyje, heẽ, nahániri", type: "guarani" },
+      { topic: "Zahlen von 0 bis 10", type: "vokabular" },
+      { topic: "Zahlen von 11 bis 20 und wichtige Mengenwörter: un poco, mucho, todo, nada", type: "vokabular" },
+      { topic: "die wichtigsten Sätze zum Sagen, was man will oder hat: quiero, tengo, hay, es, está", type: "verben" },
+      { topic: "die wichtigsten Sätze für Können, Mögen und Brauchen: puedo, me gusta, necesito", type: "verben" },
+      { topic: "Farben", type: "vokabular" },
+      { topic: "Familie: mamá, papá, hijo/hija, hermano/hermana, abuelo/abuela", type: "vokabular" },
+      { topic: "Essen und Trinken: agua, comida, pan, carne, fruta, tereré, chipa, mandioca", type: "vokabular" },
+      { topic: "Wiederholung 1: Begrüßung, Guaraní-Grundwörter, Zahlen 0–20, quiero/tengo/hay/es/está/puedo/me gusta, Farben, Familie und Essen – von jeder Gruppe nur die 2–3 wichtigsten Wörter", type: "zusammenfassung" },
+      { topic: "wichtige Adjektive: bueno/malo, grande/chico, lindo/feo, caro/barato", type: "beschreibung" },
+      { topic: "Wochentage und Tageszeiten: hoy, mañana, la mañana, la tarde, la noche", type: "vokabular" },
+      { topic: "Zu Hause: casa, cuarto, baño, cocina, cama", type: "vokabular" },
+      { topic: "beim Einkaufen: cuánto cuesta, quiero comprar, el precio, caro, barato", type: "vokabular" },
+      { topic: "wichtige Wörter für Gefühle: feliz, cansado/a, tengo hambre, tengo sed", type: "beschreibung" },
+      { topic: "Guaraní im Alltag: weitere Wörter, die Paraguayer oft mitten im Spanischen benutzen", type: "guarani" },
+      { topic: "die 3 wichtigsten Fragewörter: qué, dónde, cuánto", type: "fragen" },
+      { topic: "Wiederholung 2: Adjektive, Wochentage, Zuhause, Einkaufen, Gefühle, Guaraní im Alltag und Fragewörter – von jeder Gruppe nur die 2–3 wichtigsten Wörter", type: "zusammenfassung" }
+    ]
+  },
+  {
+    // Dormant – erst aktiv, wenn "A1" zu ACTIVE_LEVELS hinzugefügt wird.
+    // Ursprünglich für die Paraguay-Reise geschrieben (2026-08-23); enthält
+    // mehr Grammatik/Dialog als der A0-Block und sollte vor dem Freischalten
+    // ggf. nochmal auf "ohne Grammatik/Zeitformen" geprüft werden.
     level: "A1",
     topics: [
       { topic: "die ersten Guaraní-Wörter: hallo, danke, ja, nein, entschuldigung", type: "guarani" },
@@ -158,31 +213,19 @@ export const CURRICULUM = [
   }
 ];
 
-// Episoden-Anzahl, ab der das Curriculum neu bei A1 startet. Ältere Episoden
-// (Index < CURRICULUM_RESET_AT) bleiben in den Blobs unverändert erhalten,
-// zählen für die Themenwahl aber nicht mehr mit – die Rotation rechnet ab hier
-// wieder bei 0.
-// Historie: 63 = Reset am 2026-07-31 (Cap bei B1 statt C1).
-//          169 = Reset am 2026-08-23 (Neuausrichtung auf die Paraguay-Reise:
-//                Flughafen/Airbnb/Mietwagen + Guaraní, s. CURRICULUM oben).
-const CURRICULUM_RESET_AT = 169;
+// Flacher Pool aus allen Themen der aktiven Level (Reihenfolge: Level-Block-
+// Reihenfolge in CURRICULUM, innerhalb eines Blocks wie dort aufgelistet).
+const ACTIVE_POOL = CURRICULUM
+  .filter((block) => ACTIVE_LEVELS.includes(block.level))
+  .flatMap((block) => block.topics.map((entry) => ({ level: block.level, entry })));
 
 // Wählt Thema, Niveau, Typ und System-Prompt für die n-te Lektion (0-basiert;
-// n = Anzahl bisher erzeugter Episoden). Arbeitet sich block für block durchs
-// Curriculum; ist der letzte Block einmal komplett durch, wird nur noch er
-// wiederholt.
+// n = Anzahl bisher erzeugter Episoden). Rotiert endlos durch ACTIVE_POOL –
+// ein Thema wiederholt sich erst, wenn der ganze aktive Pool durch ist.
 export function pickForIndex(index) {
-  let remaining = Math.max(0, index - CURRICULUM_RESET_AT);
-  for (let i = 0; i < CURRICULUM.length; i++) {
-    const block = CURRICULUM[i];
-    const isLast = i === CURRICULUM.length - 1;
-    if (remaining < block.topics.length || isLast) {
-      const entry = block.topics[remaining % block.topics.length];
-      const { topic, type } = typeof entry === "string" ? { topic: entry, type: "dialog" } : entry;
-      return { level: block.level, topic, type, system: buildSystem(block.level, type) };
-    }
-    remaining -= block.topics.length;
-  }
+  const { level, entry } = ACTIVE_POOL[index % ACTIVE_POOL.length];
+  const { topic, type } = typeof entry === "string" ? { topic: entry, type: "dialog" } : entry;
+  return { level, topic, type, system: buildSystem(level, type) };
 }
 
 export function pcmToMp3(pcmBase64, sampleRate) {
